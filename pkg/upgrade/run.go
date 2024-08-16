@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	getter "github.com/hashicorp/go-getter"
+	getter "github.com/hashicorp/go-getter/v2"
 	"golang.org/x/mod/semver"
 
 	cfs "github.com/kilianpaquier/cli-sdk/pkg/fs"
@@ -100,18 +100,13 @@ func Run(ctx context.Context, projectName, currentVersion string, getReleases Ge
 		return fmt.Errorf("get download url: %w", err)
 	}
 
-	httpGetter := getter.HttpGetter{
-		Client:                o.httpClient,
-		XTerraformGetDisabled: true, // unnecessary for assets downloading case
-	}
-	options := []getter.ClientOption{
-		getter.WithContext(ctx),
-		getter.WithGetters(map[string]getter.Getter{"http": &httpGetter, "https": &httpGetter}),
-		func(c *getter.Client) error { c.DisableSymlinks = true; return nil }, // security consideration
+	get := getter.Client{
+		DisableSymlinks: true,
+		Getters:         []getter.Getter{&getter.HttpGetter{Client: o.httpClient, XTerraformGetDisabled: true}},
 	}
 	// download in temporary directory the release (since we only want to move, rename and keep the binary)
 	tmp := filepath.Join(os.TempDir(), projectName, release.TagName)
-	if err := getter.Get(tmp, url, options...); err != nil {
+	if _, err := get.Get(ctx, &getter.Request{Src: url, Dst: tmp, GetMode: getter.ModeDir}); err != nil {
 		return fmt.Errorf("download asset(s): %w", err)
 	}
 
