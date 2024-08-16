@@ -2,12 +2,12 @@ package clog
 
 import "log"
 
-// std is a simple implementation of Logger for log std library.
-type std struct {
-	l *log.Logger
+// stdlog is a simple implementation of Logger for log stdlog library.
+type stdlog struct {
+	log *log.Logger
 }
 
-var _log Logger = &std{log.Default()} // ensure interface is implemented
+var _log Logger = &stdlog{log.Default()} // ensure interface is implemented
 
 // Std returns the default std logger (log library).
 func Std() Logger {
@@ -15,21 +15,38 @@ func Std() Logger {
 }
 
 // StdWith returns the Logger interface with input std logger.
-func StdWith(l *log.Logger) Logger {
-	return &std{l}
+func StdWith(logger *log.Logger) Logger {
+	return &stdlog{logger}
 }
 
-// Infof logs with std logger using Printf function
-// with newline is automatically added to the end of msg.
+// Debugf logs with std logger using Printf function.
 //
 // No logging level is involved since base std library doesn't handle logging level.
-func (s *std) Infof(msg string, args ...any) {
-	s.l.Printf(msg+"\n", args...)
+func (s *stdlog) Debugf(msg string, args ...any) {
+	s.print(msg, args...)
+}
+
+// Errorf logs with std logger using Printf function.
+//
+// No logging level is involved since base std library doesn't handle logging level.
+func (s *stdlog) Errorf(msg string, args ...any) {
+	s.print(msg, args...)
+}
+
+// Infof logs with std logger using Printf function.
+//
+// No logging level is involved since base std library doesn't handle logging level.
+func (s *stdlog) Infof(msg string, args ...any) {
+	s.print(msg+"\n", args...)
 }
 
 // Warnf logs with std logger using Printf function.
 //
 // No logging level is involved since base std library doesn't handle logging level.
-func (s *std) Warnf(msg string, args ...any) {
-	s.Infof(msg, args...)
+func (s *stdlog) Warnf(msg string, args ...any) {
+	s.print(msg, args...)
+}
+
+func (s *stdlog) print(msg string, args ...any) {
+	s.log.Printf(msg+"\n", args...)
 }

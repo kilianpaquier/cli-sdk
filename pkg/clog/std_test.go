@@ -11,6 +11,32 @@ import (
 )
 
 func TestStd(t *testing.T) {
+	t.Run("debugf", func(t *testing.T) {
+		// Arrange
+		std := clog.Std()
+		var buf bytes.Buffer
+		log.SetOutput(&buf)
+
+		// Act
+		std.Debugf("some message")
+
+		// Assert
+		assert.Contains(t, buf.String(), "some message")
+	})
+
+	t.Run("errorf", func(t *testing.T) {
+		// Arrange
+		std := clog.Std()
+		var buf bytes.Buffer
+		log.SetOutput(&buf)
+
+		// Act
+		std.Errorf("some message")
+
+		// Assert
+		assert.Contains(t, buf.String(), "some message")
+	})
+
 	t.Run("infof", func(t *testing.T) {
 		// Arrange
 		std := clog.Std()
@@ -39,6 +65,32 @@ func TestStd(t *testing.T) {
 }
 
 func TestStdWith(t *testing.T) {
+	t.Run("debugf", func(t *testing.T) {
+		// Arrange
+		std := clog.StdWith(log.Default())
+		var buf bytes.Buffer
+		log.SetOutput(&buf)
+
+		// Act
+		std.Debugf("some message")
+
+		// Assert
+		assert.Contains(t, buf.String(), "some message")
+	})
+
+	t.Run("errorf", func(t *testing.T) {
+		// Arrange
+		std := clog.StdWith(log.Default())
+		var buf bytes.Buffer
+		log.SetOutput(&buf)
+
+		// Act
+		std.Errorf("some message")
+
+		// Assert
+		assert.Contains(t, buf.String(), "some message")
+	})
+
 	t.Run("infof", func(t *testing.T) {
 		// Arrange
 		std := clog.StdWith(log.Default())

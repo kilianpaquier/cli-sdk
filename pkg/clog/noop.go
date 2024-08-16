@@ -9,6 +9,12 @@ func Noop() Logger {
 	return _noop
 }
 
+// Debugf does nothing.
+func (*noop) Debugf(string, ...any) {}
+
+// Errorf does nothing.
+func (*noop) Errorf(string, ...any) {}
+
 // Infof does nothing.
 func (*noop) Infof(string, ...any) {}
 
