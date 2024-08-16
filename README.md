@@ -13,3 +13,9 @@
 </p>
 
 ---
+
+## Features
+
+- [FS](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/fs)
+- [Logger](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/logger)
+- [Upgrade](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/upgrade)
