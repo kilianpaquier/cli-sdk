@@ -7,11 +7,11 @@ type std struct {
 	std *log.Logger
 }
 
-var _ Logger = &std{std: log.Default()} // ensure interface is implemented
+var stdlog Logger = &std{std: log.Default()} // ensure interface is implemented
 
 // Std returns the default std logger (log library).
 func Std() Logger {
-	return &std{log.Default()}
+	return stdlog
 }
 
 // StdWith returns the Logger interface with input std logger.

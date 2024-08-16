@@ -2,11 +2,11 @@ package logger
 
 type noop struct{}
 
-var _ Logger = &noop{} // ensure interface is implemented
+var nooplog Logger = &noop{} // ensure interface is implemented
 
 // Noop returns an empty logger which will do nothing.
 func Noop() Logger {
-	return &noop{}
+	return nooplog
 }
 
 // Infof does nothing.
