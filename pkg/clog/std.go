@@ -1,22 +1,22 @@
-package logger
+package clog
 
 import "log"
 
 // std is a simple implementation of Logger for log std library.
 type std struct {
-	std *log.Logger
+	l *log.Logger
 }
 
-var stdlog Logger = &std{std: log.Default()} // ensure interface is implemented
+var _log Logger = &std{log.Default()} // ensure interface is implemented
 
 // Std returns the default std logger (log library).
 func Std() Logger {
-	return stdlog
+	return _log
 }
 
 // StdWith returns the Logger interface with input std logger.
-func StdWith(logger *log.Logger) Logger {
-	return &std{logger}
+func StdWith(l *log.Logger) Logger {
+	return &std{l}
 }
 
 // Infof logs with std logger using Printf function
@@ -24,7 +24,7 @@ func StdWith(logger *log.Logger) Logger {
 //
 // No logging level is involved since base std library doesn't handle logging level.
 func (s *std) Infof(msg string, args ...any) {
-	s.std.Printf(msg+"\n", args...)
+	s.l.Printf(msg+"\n", args...)
 }
 
 // Warnf logs with std logger using Printf function.

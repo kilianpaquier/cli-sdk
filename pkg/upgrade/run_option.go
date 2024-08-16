@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 
-	"github.com/kilianpaquier/cli-sdk/pkg/logger"
+	"github.com/kilianpaquier/cli-sdk/pkg/clog"
 )
 
 var (
@@ -53,7 +53,7 @@ func WithHTTPClient(client *http.Client) RunOption {
 // WithLogger defines the logger implementation for Run function.
 //
 // When not provided, no logging will be made.
-func WithLogger(log logger.Logger) RunOption {
+func WithLogger(log clog.Logger) RunOption {
 	return func(o *option) error {
 		o.log = log
 		return nil
@@ -109,7 +109,7 @@ type option struct {
 
 	destdir    string
 	httpClient *http.Client
-	log        logger.Logger
+	log        clog.Logger
 }
 
 // newOpt creates a new option struct with all input Option functions
@@ -139,7 +139,7 @@ func newOpt(opts ...RunOption) (option, error) {
 		o.httpClient = cleanhttp.DefaultClient()
 	}
 	if o.log == nil {
-		o.log = logger.Noop()
+		o.log = clog.Noop()
 	}
 	return *o, errors.Join(errs...)
 }

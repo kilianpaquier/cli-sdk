@@ -1,4 +1,4 @@
-package fs
+package cfs
 
 import (
 	"io/fs"

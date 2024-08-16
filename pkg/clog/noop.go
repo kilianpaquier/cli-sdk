@@ -1,12 +1,12 @@
-package logger
+package clog
 
 type noop struct{}
 
-var nooplog Logger = &noop{} // ensure interface is implemented
+var _noop Logger = &noop{} // ensure interface is implemented
 
 // Noop returns an empty logger which will do nothing.
 func Noop() Logger {
-	return nooplog
+	return _noop
 }
 
 // Infof does nothing.

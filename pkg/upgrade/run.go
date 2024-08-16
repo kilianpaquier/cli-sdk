@@ -14,7 +14,7 @@ import (
 	getter "github.com/hashicorp/go-getter/v2"
 	"golang.org/x/mod/semver"
 
-	cfs "github.com/kilianpaquier/cli-sdk/pkg/fs"
+	"github.com/kilianpaquier/cli-sdk/pkg/cfs"
 )
 
 var (

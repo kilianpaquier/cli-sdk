@@ -1,4 +1,4 @@
-package logger_test
+package clog_test
 
 import (
 	"bytes"
@@ -7,13 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kilianpaquier/cli-sdk/pkg/logger"
+	"github.com/kilianpaquier/cli-sdk/pkg/clog"
 )
 
 func TestStd(t *testing.T) {
 	t.Run("infof", func(t *testing.T) {
 		// Arrange
-		std := logger.Std()
+		std := clog.Std()
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 
@@ -26,7 +26,7 @@ func TestStd(t *testing.T) {
 
 	t.Run("warnf", func(t *testing.T) {
 		// Arrange
-		std := logger.Std()
+		std := clog.Std()
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 
@@ -41,7 +41,7 @@ func TestStd(t *testing.T) {
 func TestStdWith(t *testing.T) {
 	t.Run("infof", func(t *testing.T) {
 		// Arrange
-		std := logger.StdWith(log.Default())
+		std := clog.StdWith(log.Default())
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 
@@ -54,7 +54,7 @@ func TestStdWith(t *testing.T) {
 
 	t.Run("warnf", func(t *testing.T) {
 		// Arrange
-		std := logger.StdWith(log.Default())
+		std := clog.StdWith(log.Default())
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 

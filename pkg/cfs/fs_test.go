@@ -1,4 +1,4 @@
-package fs_test
+package cfs_test
 
 import (
 	"os"
@@ -8,17 +8,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kilianpaquier/cli-sdk/pkg/fs"
+	"github.com/kilianpaquier/cli-sdk/pkg/cfs"
 )
 
 func TestOS(t *testing.T) {
 	tmp := t.TempDir()
 
 	name := filepath.Join(tmp, "hey.txt")
-	err := os.WriteFile(name, []byte("hey !"), fs.RwRR)
+	err := os.WriteFile(name, []byte("hey !"), cfs.RwRR)
 	require.NoError(t, err)
 
-	fsys := fs.OS()
+	fsys := cfs.OS()
 
 	t.Run("success_open", func(t *testing.T) {
 		// Act

@@ -22,6 +22,6 @@ go get -u github.com/kilianpaquier/cli-sdk@main
 
 ## Features
 
-- [FS](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/fs)
-- [Logger](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/logger)
+- [FS](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/cfs)
+- [Logger](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/clog)
 - [Upgrade](https://pkg.go.dev/github.com/kilianpaquier/cli-sdk/pkg/upgrade)

@@ -1,4 +1,4 @@
-package logger
+package clog
 
 // Logger is a simplified interface for logging purposes.
 //

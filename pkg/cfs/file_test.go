@@ -1,4 +1,4 @@
-package fs_test
+package cfs_test
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kilianpaquier/cli-sdk/pkg/fs"
+	"github.com/kilianpaquier/cli-sdk/pkg/cfs"
 )
 
 func TestCopyFile(t *testing.T) {
@@ -16,7 +16,7 @@ func TestCopyFile(t *testing.T) {
 	src := filepath.Join(tmp, "file.txt")
 	dest := filepath.Join(tmp, "copy.txt")
 
-	err := os.WriteFile(src, []byte("hey file"), fs.RwRR)
+	err := os.WriteFile(src, []byte("hey file"), cfs.RwRR)
 	require.NoError(t, err)
 
 	t.Run("error_src_not_exists", func(t *testing.T) {
@@ -24,7 +24,7 @@ func TestCopyFile(t *testing.T) {
 		src := filepath.Join(tmp, "invalid.txt")
 
 		// Act
-		err := fs.CopyFile(src, dest)
+		err := cfs.CopyFile(src, dest)
 
 		// Assert
 		assert.ErrorContains(t, err, "open")
@@ -36,7 +36,7 @@ func TestCopyFile(t *testing.T) {
 		dest := filepath.Join(tmp, "invalid", "file.txt")
 
 		// Act
-		err := fs.CopyFile(src, dest)
+		err := cfs.CopyFile(src, dest)
 
 		// Assert
 		assert.ErrorContains(t, err, "create")
@@ -45,7 +45,7 @@ func TestCopyFile(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		// Act
-		err := fs.CopyFile(src, dest)
+		err := cfs.CopyFile(src, dest)
 
 		// Assert
 		assert.NoError(t, err)
@@ -54,10 +54,10 @@ func TestCopyFile(t *testing.T) {
 
 	t.Run("success_with_fs", func(t *testing.T) {
 		// Act
-		err := fs.CopyFile(src, dest,
-			fs.WithFS(fs.OS()),
-			fs.WithJoin(filepath.Join),
-			fs.WithPerm(fs.RwRR))
+		err := cfs.CopyFile(src, dest,
+			cfs.WithFS(cfs.OS()),
+			cfs.WithJoin(filepath.Join),
+			cfs.WithPerm(cfs.RwRR))
 
 		// Assert
 		assert.NoError(t, err)
@@ -71,7 +71,7 @@ func TestExists(t *testing.T) {
 		invalid := filepath.Join(os.TempDir(), "invalid")
 
 		// Act
-		exists := fs.Exists(invalid)
+		exists := cfs.Exists(invalid)
 
 		// Assert
 		assert.False(t, exists)
@@ -86,7 +86,7 @@ func TestExists(t *testing.T) {
 		require.NoError(t, file.Close())
 
 		// Act
-		exists := fs.Exists(src)
+		exists := cfs.Exists(src)
 
 		// Assert
 		assert.True(t, exists)
@@ -99,7 +99,7 @@ func TestSafeMove(t *testing.T) {
 		dest := t.TempDir()
 
 		// Act
-		err := fs.SafeMove(dest, dest)
+		err := cfs.SafeMove(dest, dest)
 
 		// Assert
 		assert.ErrorContains(t, err, "read file")
@@ -110,11 +110,11 @@ func TestSafeMove(t *testing.T) {
 		tmp := t.TempDir()
 		src := filepath.Join(tmp, "src.txt")
 		dest := filepath.Join(tmp, "subdir", "file.txt")
-		require.NoError(t, os.WriteFile(src, []byte("some text"), fs.RwRR))
-		require.NoError(t, os.WriteFile(filepath.Join(tmp, "subdir"), []byte(""), fs.RwxRxRxRx))
+		require.NoError(t, os.WriteFile(src, []byte("some text"), cfs.RwRR))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "subdir"), []byte(""), cfs.RwxRxRxRx))
 
 		// Act
-		err := fs.SafeMove(src, dest)
+		err := cfs.SafeMove(src, dest)
 
 		// Assert
 		assert.ErrorContains(t, err, "mkdir all")
@@ -125,11 +125,11 @@ func TestSafeMove(t *testing.T) {
 		tmp := t.TempDir()
 		src := filepath.Join(tmp, "src.txt")
 		dest := filepath.Join(tmp, "file.txt")
-		require.NoError(t, os.WriteFile(src, []byte("some text"), fs.RwRR))
-		require.NoError(t, os.Mkdir(filepath.Join(tmp, "file.txt_"), fs.RwxRxRxRx))
+		require.NoError(t, os.WriteFile(src, []byte("some text"), cfs.RwRR))
+		require.NoError(t, os.Mkdir(filepath.Join(tmp, "file.txt_"), cfs.RwxRxRxRx))
 
 		// Act
-		err := fs.SafeMove(src, dest)
+		err := cfs.SafeMove(src, dest)
 
 		// Assert
 		assert.ErrorContains(t, err, "write file")
@@ -140,11 +140,11 @@ func TestSafeMove(t *testing.T) {
 		tmp := t.TempDir()
 		src := filepath.Join(tmp, "src.txt")
 		dest := filepath.Join(tmp, "file.txt")
-		require.NoError(t, os.WriteFile(src, []byte("some text"), fs.RwRR))
-		require.NoError(t, os.Mkdir(dest, fs.RwxRxRxRx))
+		require.NoError(t, os.WriteFile(src, []byte("some text"), cfs.RwRR))
+		require.NoError(t, os.Mkdir(dest, cfs.RwxRxRxRx))
 
 		// Act
-		err := fs.SafeMove(src, dest)
+		err := cfs.SafeMove(src, dest)
 
 		// Assert
 		assert.ErrorContains(t, err, "move")
@@ -155,10 +155,10 @@ func TestSafeMove(t *testing.T) {
 		tmp := t.TempDir()
 		src := filepath.Join(tmp, "src.txt")
 		dest := filepath.Join(tmp, "subdir", "file.txt")
-		require.NoError(t, os.WriteFile(src, []byte("some text"), fs.RwRR))
+		require.NoError(t, os.WriteFile(src, []byte("some text"), cfs.RwRR))
 
 		// Act
-		err := fs.SafeMove(src, dest)
+		err := cfs.SafeMove(src, dest)
 
 		// Assert
 		assert.NoError(t, err)

@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	cfs "github.com/kilianpaquier/cli-sdk/pkg/fs"
-	"github.com/kilianpaquier/cli-sdk/pkg/logger"
+	"github.com/kilianpaquier/cli-sdk/pkg/cfs"
+	"github.com/kilianpaquier/cli-sdk/pkg/clog"
 	"github.com/kilianpaquier/cli-sdk/pkg/upgrade"
 )
 
@@ -27,7 +27,7 @@ func toPtr[T any](in T) *T {
 
 func TestRun(t *testing.T) {
 	ctx := context.Background()
-	log := logger.Std()
+	log := clog.Std()
 
 	// setup github / go-getter mocking
 	httpClient := cleanhttp.DefaultClient()
