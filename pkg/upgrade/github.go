@@ -13,6 +13,29 @@ import (
 //
 // It's generic to help the reusability of this function when used as an SDK.
 func GithubReleases(owner, repo string) func(ctx context.Context, httpClient *http.Client) ([]Release, error) {
+	toReleases := func(releases []*github.RepositoryRelease) []Release {
+		result := make([]Release, 0, len(releases))
+		for _, release := range releases {
+			if release == nil || release.TagName == nil || release.GetDraft() {
+				continue
+			}
+			r := Release{
+				Assets:  make([]Asset, 0, len(release.Assets)),
+				TagName: *release.TagName,
+			}
+
+			for _, asset := range release.Assets {
+				if asset == nil || asset.Name == nil || asset.BrowserDownloadURL == nil {
+					continue
+				}
+				r.Assets = append(r.Assets, Asset{DownloadURL: *asset.BrowserDownloadURL, Name: *asset.Name})
+			}
+
+			result = append(result, r)
+		}
+		return result
+	}
+
 	return func(ctx context.Context, httpClient *http.Client) ([]Release, error) {
 		gCtx := context.WithValue(ctx, github.SleepUntilPrimaryRateLimitResetWhenRateLimited, true) // handle github rate limiter
 
@@ -41,26 +64,3 @@ func GithubReleases(owner, repo string) func(ctx context.Context, httpClient *ht
 }
 
 var _ GetReleases = GithubReleases("owner", "repo") // ensure interface is implemented
-
-func toReleases(releases []*github.RepositoryRelease) []Release {
-	result := make([]Release, 0, len(releases))
-	for _, release := range releases {
-		if release == nil || release.TagName == nil || release.GetDraft() {
-			continue
-		}
-		r := Release{
-			Assets:  make([]Asset, 0, len(release.Assets)),
-			TagName: *release.TagName,
-		}
-
-		for _, asset := range release.Assets {
-			if asset == nil || asset.Name == nil || asset.BrowserDownloadURL == nil {
-				continue
-			}
-			r.Assets = append(r.Assets, Asset{DownloadURL: *asset.BrowserDownloadURL, Name: *asset.Name})
-		}
-
-		result = append(result, r)
-	}
-	return result
-}
