@@ -14,11 +14,9 @@ func Std() Logger {
 	return &std{log.Default()}
 }
 
-// Info logs with std logger using Println function.
-//
-// No logging level is involved since base std library doesn't handle logging level.
-func (s *std) Info(args ...any) {
-	s.std.Println(args...)
+// StdWith returns the Logger interface with input std logger.
+func StdWith(logger *log.Logger) Logger {
+	return &std{logger}
 }
 
 // Infof logs with std logger using Printf function
@@ -27,13 +25,6 @@ func (s *std) Info(args ...any) {
 // No logging level is involved since base std library doesn't handle logging level.
 func (s *std) Infof(msg string, args ...any) {
 	s.std.Printf(msg+"\n", args...)
-}
-
-// Warn logs with std logger using Println function.
-//
-// No logging level is involved since base std library doesn't handle logging level.
-func (s *std) Warn(args ...any) {
-	s.Info(args...)
 }
 
 // Warnf logs with std logger using Printf function.
