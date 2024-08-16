@@ -10,7 +10,6 @@ ci:
     action: semantic-release
     auto: false
     backmerge: false
-    disable: true
     mode: github-token
 license: mit
 maintainers:
