@@ -52,7 +52,7 @@ func WithHTTPClient(client *http.Client) RunOption {
 
 // WithLogger defines the logger implementation for Run function.
 //
-// When not provided, the default one used is the one from std log library.
+// When not provided, no logging will be made.
 func WithLogger(log logger.Logger) RunOption {
 	return func(o *option) error {
 		o.log = log
@@ -139,7 +139,7 @@ func newOpt(opts ...RunOption) (option, error) {
 		o.httpClient = cleanhttp.DefaultClient()
 	}
 	if o.log == nil {
-		o.log = logger.Std()
+		o.log = logger.Noop()
 	}
 	return *o, errors.Join(errs...)
 }

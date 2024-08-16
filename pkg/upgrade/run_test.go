@@ -13,9 +13,6 @@ import (
 	"github.com/google/go-github/v63/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jarcoal/httpmock"
-	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -24,9 +21,13 @@ import (
 	"github.com/kilianpaquier/cli-sdk/pkg/upgrade"
 )
 
+func toPtr[T any](in T) *T {
+	return &in
+}
+
 func TestRun(t *testing.T) {
 	ctx := context.Background()
-	log := logrus.WithContext(ctx)
+	log := logger.Std()
 
 	// setup github / go-getter mocking
 	httpClient := cleanhttp.DefaultClient()
@@ -112,9 +113,9 @@ func TestRun(t *testing.T) {
 		httpmock.RegisterResponder(http.MethodGet, url,
 			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
 				{
-					TagName: lo.ToPtr("v1.0.0"),
+					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: lo.ToPtr("suffix missing"), BrowserDownloadURL: lo.ToPtr("some URL")},
+						{Name: toPtr("suffix missing"), BrowserDownloadURL: toPtr("some URL")},
 					},
 				},
 			}))
@@ -134,10 +135,10 @@ func TestRun(t *testing.T) {
 		httpmock.RegisterResponder(http.MethodGet, url,
 			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
 				{
-					TagName: lo.ToPtr("v1.0.0"),
+					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: lo.ToPtr("http://example.com/asset/download")},
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: lo.ToPtr("http://example.com/asset/download")},
+						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: toPtr("http://example.com/asset/download")},
+						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: toPtr("http://example.com/asset/download")},
 					},
 				},
 			}))
@@ -158,18 +159,15 @@ func TestRun(t *testing.T) {
 		httpmock.RegisterResponder(http.MethodGet, releasesURL,
 			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
 				{
-					TagName: lo.ToPtr("v1.0.0"),
+					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
 					},
 				},
 			}))
 		httpmock.RegisterResponder(http.MethodGet, downloadURL,
 			httpmock.NewStringResponder(http.StatusOK, "some text for a file")) // go-getter doesn't really download anything sadly
-
-		hook := test.NewGlobal()
-		t.Cleanup(func() { hook.Reset() })
 
 		// Act
 		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
@@ -187,42 +185,44 @@ func TestRun(t *testing.T) {
 		url := "https://api.github.com/repos/owner/repo/releases?page=1&per_page=100"
 		httpmock.RegisterResponder(http.MethodGet, url,
 			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
-				{TagName: lo.ToPtr("v1.0.0-beta.1")},
+				{TagName: toPtr("v1.0.0-beta.1")},
 			}))
 
-		hook := test.NewGlobal()
-		t.Cleanup(func() { hook.Reset() })
+		dest := filepath.Join(t.TempDir(), "subdir")
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithHTTPClient(httpClient), upgrade.WithLogger(log))
+		err := upgrade.Run(ctx, "repo", "", getReleases,
+			upgrade.WithDestination(dest),
+			upgrade.WithHTTPClient(httpClient),
+			upgrade.WithLogger(log))
 
 		// Assert
 		assert.NoError(t, err)
-		logs := logger.ToString(hook.AllEntries())
-		assert.Contains(t, logs, "no new version found matching options")
+		assert.Equal(t, httpmock.GetTotalCallCount(), 1)
+		assert.NoDirExists(t, dest)
 	})
 
 	t.Run("success_already_installed", func(t *testing.T) {
 		// Arrange
 		t.Cleanup(httpmock.Reset)
 		releasesURL := "https://api.github.com/repos/owner/repo/releases?page=1&per_page=100"
+		downloadURL := "http://example.com/asset/download/repo"
 		httpmock.RegisterResponder(http.MethodGet, releasesURL,
 			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
 				{
-					TagName: lo.ToPtr("v1.0.1-beta.1"),
+					TagName: toPtr("v1.0.1-beta.1"),
 					Assets: []*github.ReleaseAsset{
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: lo.ToPtr("http://example.com/asset/download")},
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: lo.ToPtr("http://example.com/asset/download")},
+						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
 					},
 				},
 			}))
+		httpmock.RegisterResponder(http.MethodGet, downloadURL,
+			httpmock.NewStringResponder(http.StatusOK, "some text for a file")) // go-getter doesn't really download anything sadly
 
 		dest := t.TempDir()
 		require.NoError(t, os.MkdirAll(filepath.Join(dest, "repo-pre"), cfs.RwxRxRxRx))
 		require.NoError(t, os.MkdirAll(filepath.Join(dest, "repo-pre.exe"), cfs.RwxRxRxRx))
-
-		hook := test.NewGlobal()
-		t.Cleanup(func() { hook.Reset() })
 
 		// Act
 		err := upgrade.Run(ctx, "repo", "v1.0.1-beta.1", getReleases,
@@ -233,9 +233,7 @@ func TestRun(t *testing.T) {
 
 		// Assert
 		assert.NoError(t, err)
-		logs := logger.ToString(hook.AllEntries())
-		assert.Contains(t, logs, "installing version 'v1.0.1-beta.1'")
-		assert.Contains(t, logs, "version 'v1.0.1-beta.1' already installed")
+		assert.Equal(t, httpmock.GetTotalCallCount(), 1)
 	})
 
 	t.Run("success_download", func(t *testing.T) {
@@ -246,10 +244,10 @@ func TestRun(t *testing.T) {
 		httpmock.RegisterResponder(http.MethodGet, releasesURL,
 			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
 				{
-					TagName: lo.ToPtr("v1.0.0"),
+					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
-						{Name: lo.ToPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
 					},
 				},
 			}))
@@ -269,9 +267,6 @@ func TestRun(t *testing.T) {
 			require.NoError(t, file.Close())
 		}
 
-		hook := test.NewGlobal()
-		t.Cleanup(func() { hook.Reset() })
-
 		// Act
 		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
 			upgrade.WithDestination(t.TempDir()),
@@ -280,9 +275,6 @@ func TestRun(t *testing.T) {
 
 		// Assert
 		assert.NoError(t, err)
-		logs := logger.ToString(hook.AllEntries())
-		assert.Contains(t, logs, "installing version 'v1.0.0'")
-		assert.Contains(t, logs, "successfully installed version 'v1.0.0' in")
 	})
 }
 

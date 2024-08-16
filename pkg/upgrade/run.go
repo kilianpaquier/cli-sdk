@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	getter "github.com/hashicorp/go-getter"
-	"github.com/samber/lo"
 	"golang.org/x/mod/semver"
 
 	cfs "github.com/kilianpaquier/cli-sdk/pkg/fs"
@@ -64,8 +63,13 @@ func Run(ctx context.Context, projectName, currentVersion string, getReleases Ge
 	}
 
 	// group things related to OS specificities for a better maintenability
-	ext := lo.Ternary(runtime.GOOS == "windows", ".exe", "")
-	suffix := fmt.Sprint(runtime.GOOS, "_", runtime.GOARCH, lo.Ternary(runtime.GOOS == "windows", ".zip", ".tar.gz")) // linux_amd64.tar.gz or windows_arm64.zip, etc.
+	archive, ext := func() (string, string) {
+		if runtime.GOOS == "windows" {
+			return ".zip", ".exe"
+		}
+		return ".tar.gz", ""
+	}()
+	suffix := fmt.Sprint(runtime.GOOS, "_", runtime.GOARCH, archive) // linux_amd64.tar.gz or windows_arm64.zip, etc.
 
 	o, err := newOpt(opts...)
 	if err != nil {
@@ -79,7 +83,7 @@ func Run(ctx context.Context, projectName, currentVersion string, getReleases Ge
 
 	release, ok := findRelease(releases, o.releaseOptions)
 	if !ok {
-		o.log.Info("no new version found matching options")
+		o.log.Infof("no new version found matching options")
 		return nil
 	}
 	name := binaryName(projectName, ext, release.TagName, o.releaseOptions)
@@ -165,18 +169,27 @@ func findRelease(releases []Release, opts releaseOptions) (*Release, bool) {
 // It's a specific function since download is handled by go-getter and that it can handle checksums verification.
 // As such, returned URL can be enriched with the checksums URL.
 func getDownloadURL(release *Release, suffix string) (string, error) {
-	// find the right asset
-	asset, ok := lo.Find(release.Assets, func(asset Asset) bool { return strings.HasSuffix(asset.Name, suffix) })
-	if !ok {
+	var bin, checksum Asset
+	for _, asset := range release.Assets {
+		// find the right asset
+		if strings.HasSuffix(asset.Name, suffix) {
+			bin = asset
+		}
+
+		// find checksum file in assets for verification during download
+		if asset.Name == "checksums.txt" {
+			checksum = asset
+		}
+	}
+
+	if bin == (Asset{}) {
 		return "", fmt.Errorf("no valid release asset found with suffix '%s'", suffix)
 	}
 
-	// find checksum file in assets for verification during download
-	checksum, ok := lo.Find(release.Assets, func(asset Asset) bool { return asset.Name == "checksums.txt" })
-	if ok {
-		return fmt.Sprintf("%s?checksum=file:%s", asset.DownloadURL, checksum.DownloadURL), nil
+	if checksum != (Asset{}) {
+		return fmt.Sprintf("%s?checksum=file:%s", bin.DownloadURL, checksum.DownloadURL), nil
 	}
-	return asset.DownloadURL, nil
+	return bin.DownloadURL, nil
 }
 
 // binaryName returns the appropriate name for the binary depending on given release options.
