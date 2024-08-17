@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 
 	"github.com/hashicorp/go-cleanhttp"
 
@@ -151,14 +153,14 @@ type option struct {
 //
 // It returns an error in case some input options are invalid.
 func newOpt(opts ...RunOption) (option, error) {
-	o := &option{}
+	o := option{}
 
 	var errs []error
 	for _, opt := range opts {
 		if opt == nil {
 			continue
 		}
-		if err := opt(o); err != nil {
+		if err := opt(&o); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -167,7 +169,14 @@ func newOpt(opts ...RunOption) (option, error) {
 		errs = append(errs, ErrMajorMinorExclusive)
 	}
 	if len(errs) > 0 {
-		errs = append(errs, ErrInvalidOptions)
+		errs = slices.Insert(errs, 0, ErrInvalidOptions)
+		ef := make([]any, 0, len(errs))
+		wraps := make([]string, 0, len(errs)) // it's uggly but errors.Join with Error prints with '\n' and it's not customizable
+		for _, err := range errs {
+			ef = append(ef, err)
+			wraps = append(wraps, "%w")
+		}
+		return o, fmt.Errorf(strings.Join(wraps, ": "), ef...)
 	}
 
 	if o.assetTemplate == "" {
@@ -193,5 +202,5 @@ func newOpt(opts ...RunOption) (option, error) {
 {{- .BinExt }}`
 	}
 
-	return *o, errors.Join(errs...)
+	return o, nil
 }
