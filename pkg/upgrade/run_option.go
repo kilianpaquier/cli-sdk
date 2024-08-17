@@ -39,7 +39,7 @@ type RunOption func(*option) error
 // Various variables are available: 'ArchiveExt', 'BinExt', 'GOOS', 'GOARCH', 'Opts' (.Major, .Minor, .Prereleases), 'Repo', 'Tag'.
 func WithAssetTemplate(assetTemplate string) RunOption {
 	return func(o *option) error {
-		o.AssetTemplate = assetTemplate
+		o.assetTemplate = assetTemplate
 		return nil
 	}
 }
@@ -49,7 +49,7 @@ func WithAssetTemplate(assetTemplate string) RunOption {
 // By default, installation destination is ${HOME}/.local/bin.
 func WithDestination(destdir string) RunOption {
 	return func(o *option) error {
-		o.Destdir = destdir
+		o.destdir = destdir
 		return nil
 	}
 }
@@ -60,7 +60,7 @@ func WithDestination(destdir string) RunOption {
 // By default cleanhttp.DefaultClient() will be used.
 func WithHTTPClient(client *http.Client) RunOption {
 	return func(o *option) error {
-		o.HTTPClient = client
+		o.httpClient = client
 		return nil
 	}
 }
@@ -70,7 +70,7 @@ func WithHTTPClient(client *http.Client) RunOption {
 // When not provided, no logging will be made.
 func WithLogger(log clog.Logger) RunOption {
 	return func(o *option) error {
-		o.Log = log
+		o.log = log
 		return nil
 	}
 }
@@ -96,7 +96,7 @@ func WithLogger(log clog.Logger) RunOption {
 // Make sure you're aware of unexpected overrides.
 func WithTargetTemplate(targetTemplate string) RunOption {
 	return func(o *option) error {
-		o.TargetTemplate = targetTemplate
+		o.targetTemplate = targetTemplate
 		return nil
 	}
 }
@@ -139,11 +139,11 @@ func WithPrereleases(accepted bool) RunOption {
 type option struct {
 	releaseOptions
 
-	AssetTemplate  string
-	Destdir        string
-	HTTPClient     *http.Client
-	Log            clog.Logger
-	TargetTemplate string
+	assetTemplate  string
+	destdir        string
+	httpClient     *http.Client
+	log            clog.Logger
+	targetTemplate string
 }
 
 // newOpt creates a new option struct with all input Option functions
@@ -170,26 +170,25 @@ func newOpt(opts ...RunOption) (option, error) {
 		errs = append(errs, ErrInvalidOptions)
 	}
 
-	if o.AssetTemplate == "" {
-		o.AssetTemplate = `{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}`
+	if o.assetTemplate == "" {
+		o.assetTemplate = `{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}`
 	}
-	if o.Destdir == "" {
+	if o.destdir == "" {
 		home, _ := os.UserHomeDir()
-		o.Destdir = filepath.Join(home, ".local", "bin")
+		o.destdir = filepath.Join(home, ".local", "bin")
 	}
-	if o.HTTPClient == nil {
-		o.HTTPClient = cleanhttp.DefaultClient()
+	if o.httpClient == nil {
+		o.httpClient = cleanhttp.DefaultClient()
 	}
-	if o.Log == nil {
-		o.Log = clog.Noop()
+	if o.log == nil {
+		o.log = clog.Noop()
 	}
-	if o.TargetTemplate == "" {
-		o.TargetTemplate = `
+	if o.targetTemplate == "" {
+		o.targetTemplate = `
 {{- .Repo }}
 {{- if ne .Opts.Major "" }}{{ print "-" .Opts.Major }}
 {{- else if ne .Opts.Minor "" }}{{ print "-" .Opts.Minor }}
 {{- end }}
-
 {{- if and .Opts.Prereleases (ne .Prerelease "") }}{{ print "-" .Prerelease }}{{ end }}
 {{- .BinExt }}`
 	}

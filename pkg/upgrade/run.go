@@ -63,14 +63,14 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 		return err
 	}
 
-	releases, err := getReleases(ctx, o.HTTPClient)
+	releases, err := getReleases(ctx, o.httpClient)
 	if err != nil {
 		return fmt.Errorf("get releases: %w", err)
 	}
 
 	release, ok := findRelease(releases, o.releaseOptions)
 	if !ok {
-		o.Log.Infof("no new version found matching options")
+		o.log.Infof("no new version found matching options")
 		return nil
 	}
 
@@ -93,27 +93,27 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 		"Tag":        release.TagName,
 	}
 
-	targetName, err := getTemplateValue(o.TargetTemplate, templateData)
+	targetName, err := getTemplateValue(o.targetTemplate, templateData)
 	if err != nil {
 		return fmt.Errorf("get target name: %w", err)
 	}
-	dest := filepath.Join(o.Destdir, targetName)
+	dest := filepath.Join(o.destdir, targetName)
 
-	o.Log.Infof("installing version '%s'", release.TagName)
+	o.log.Infof("installing version '%s'", release.TagName)
 	if currentVersion == release.TagName && cfs.Exists(dest) {
-		o.Log.Infof("version '%s' already installed in '%s'", release.TagName, dest)
+		o.log.Infof("version '%s' already installed in '%s'", release.TagName, dest)
 		return nil
 	}
 
-	assetName, err := getTemplateValue(o.AssetTemplate, templateData)
+	assetName, err := getTemplateValue(o.assetTemplate, templateData)
 	if err != nil {
 		return fmt.Errorf("get asset name: %w", err)
 	}
 
-	if err := downloadAndMove(ctx, o.HTTPClient, repo, release, assetName, dest); err != nil {
+	if err := downloadAndMove(ctx, o.httpClient, repo, release, assetName, dest); err != nil {
 		return err
 	}
-	o.Log.Infof("successfully installed version '%s' in '%s'", release.TagName, dest)
+	o.log.Infof("successfully installed version '%s' in '%s'", release.TagName, dest)
 	return nil
 }
 
