@@ -6,17 +6,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/hashicorp/go-cleanhttp"
 
 	"github.com/kilianpaquier/cli-sdk/pkg/clog"
-)
-
-var (
-	_majorRegexp    = regexp.MustCompile("^v[0-9]+$")
-	_minorRegexp    = regexp.MustCompile(`^v[0-9]+\.[0-9]+$`)
-	_completeRegexp = regexp.MustCompile(`^v[0-9]+(\.[0-9]+){2}$`)
 )
 
 // ErrMajorMinorExclusive is the error returned when both options WithMajor and WithMinor are given and non empty.
@@ -25,16 +18,26 @@ var ErrMajorMinorExclusive = errors.New("both major and minor option are mutuall
 // RunOption is the right function to tune Run function with specific behaviors.
 type RunOption func(*option) error
 
+// WithAssetTemplate specifies the asset name to match (equal) for during asset finding (to retrieve the appropriate one to install).
+//
+// By default it's '{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}'.
+//
+// Various functions are available: 'lower', 'title', 'upper'.
+//
+// Various variables are available: 'ArchiveExt', 'BinExt', 'GOOS', 'GOARCH', 'Opts' (.Major, .Minor, .Prereleases), 'Repo', 'Tag'.
+func WithAssetTemplate(assetTemplate string) RunOption {
+	return func(o *option) error {
+		o.AssetTemplate = assetTemplate
+		return nil
+	}
+}
+
 // WithDestination defines the output dir where binaries will be downloaded.
 //
-// By default, when not given, ${HOME}/.local/bin/{{repo}}{{version}} will be used (extension is preserved).
-// Note that {{repo}} is given as input in Run function.
+// By default, installation destination is ${HOME}/.local/bin.
 func WithDestination(destdir string) RunOption {
 	return func(o *option) error {
-		if destdir == "" {
-			return nil
-		}
-		o.destdir = destdir
+		o.Destdir = destdir
 		return nil
 	}
 }
@@ -45,7 +48,7 @@ func WithDestination(destdir string) RunOption {
 // By default cleanhttp.DefaultClient() will be used.
 func WithHTTPClient(client *http.Client) RunOption {
 	return func(o *option) error {
-		o.httpClient = client
+		o.HTTPClient = client
 		return nil
 	}
 }
@@ -55,7 +58,33 @@ func WithHTTPClient(client *http.Client) RunOption {
 // When not provided, no logging will be made.
 func WithLogger(log clog.Logger) RunOption {
 	return func(o *option) error {
-		o.log = log
+		o.Log = log
+		return nil
+	}
+}
+
+// WithTargetTemplate specifies the target name of the installed binary.
+//
+// By default it's
+// {{- .Repo }}
+// {{- if ne .Opts.Major "" }}{{ print "-" .Opts.Major }}
+// {{- else if ne .Opts.Minor "" }}{{ print "-" .Opts.Minor }}
+// {{- end }}
+// {{- if and .Opts.Prereleases (ne .Prerelease "") }}{{ print "-" .Prerelease }}{{ end }}
+// {{- .BinExt }}
+// which gives 'repo-pre' or 'repo-v1.exe', or 'repo.exe' or 'repo' or 'repo-v1.6', etc.
+// depending on inputs options and whether the installed version is a prerelease or not.
+//
+// Various functions are available: 'lower', 'title', 'upper'.
+//
+// Various variables are available: 'ArchiveExt', 'BinExt', 'GOOS', 'GOARCH', 'Opts' (with inputs WithMajor, WithMinor and WithPrerelease), 'Repo', 'Tag'.
+//
+// Note that it's not recommended to use this option since if badly defined a prerelease installation could override the latest stable installation
+// or an old installation could override it too, etc.
+// Make sure you're aware of unexpected overrides.
+func WithTargetTemplate(targetTemplate string) RunOption {
+	return func(o *option) error {
+		o.TargetTemplate = targetTemplate
 		return nil
 	}
 }
@@ -65,15 +94,10 @@ func WithLogger(log clog.Logger) RunOption {
 // By default all major versions can be used (outside of prereleases which can be included with WithPrerelease).
 func WithMajor(major string) RunOption {
 	return func(o *option) error {
-		if major == "" {
-			return nil
-		}
-
+		o.Major = major
 		if !_majorRegexp.MatchString(major) {
 			return fmt.Errorf("invalid major version '%s'", major)
 		}
-
-		o.major = major
 		return nil
 	}
 }
@@ -83,22 +107,18 @@ func WithMajor(major string) RunOption {
 // By default all minor versions can be used (outside of prereleases which can be included with WithPrerelease).
 func WithMinor(minor string) RunOption {
 	return func(o *option) error {
-		if minor == "" {
-			return nil
-		}
+		o.Minor = minor
 		if !_minorRegexp.MatchString(minor) {
 			return fmt.Errorf("invalid minor version '%s'", minor)
 		}
-
-		o.minor = minor
 		return nil
 	}
 }
 
-// WithPrerelease specifies whether prerelease versions can be considered for upgrade / installation.
-func WithPrerelease(prerelease bool) RunOption {
+// WithPrereleases specifies whether prerelease versions can be considered for upgrade / installation.
+func WithPrereleases(accepted bool) RunOption {
 	return func(o *option) error {
-		o.prerelease = prerelease
+		o.Prereleases = accepted
 		return nil
 	}
 }
@@ -107,9 +127,11 @@ func WithPrerelease(prerelease bool) RunOption {
 type option struct {
 	releaseOptions
 
-	destdir    string
-	httpClient *http.Client
-	log        clog.Logger
+	AssetTemplate  string
+	Destdir        string
+	HTTPClient     *http.Client
+	Log            clog.Logger
+	TargetTemplate string
 }
 
 // newOpt creates a new option struct with all input Option functions
@@ -127,19 +149,32 @@ func newOpt(opts ...RunOption) (option, error) {
 	}
 
 	// ensure major and minor aren't given together since there're mutually exclusive
-	if o.major != "" && o.minor != "" {
+	if o.Major != "" && o.Minor != "" {
 		errs = append(errs, ErrMajorMinorExclusive)
 	}
 
-	if o.destdir == "" {
+	if o.AssetTemplate == "" {
+		o.AssetTemplate = `{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}`
+	}
+	if o.Destdir == "" {
 		home, _ := os.UserHomeDir()
-		o.destdir = filepath.Join(home, ".local", "bin")
+		o.Destdir = filepath.Join(home, ".local", "bin")
 	}
-	if o.httpClient == nil {
-		o.httpClient = cleanhttp.DefaultClient()
+	if o.HTTPClient == nil {
+		o.HTTPClient = cleanhttp.DefaultClient()
 	}
-	if o.log == nil {
-		o.log = clog.Noop()
+	if o.Log == nil {
+		o.Log = clog.Noop()
+	}
+	if o.TargetTemplate == "" {
+		o.TargetTemplate = `
+{{- .Repo }}
+{{- if ne .Opts.Major "" }}{{ print "-" .Opts.Major }}
+{{- else if ne .Opts.Minor "" }}{{ print "-" .Opts.Minor }}
+{{- end }}
+
+{{- if and .Opts.Prereleases (ne .Prerelease "") }}{{ print "-" .Prerelease }}{{ end }}
+{{- .BinExt }}`
 	}
 	return *o, errors.Join(errs...)
 }

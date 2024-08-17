@@ -37,7 +37,7 @@ func (s *stdlog) Errorf(msg string, args ...any) {
 //
 // No logging level is involved since base std library doesn't handle logging level.
 func (s *stdlog) Infof(msg string, args ...any) {
-	s.print(msg+"\n", args...)
+	s.print(msg, args...)
 }
 
 // Warnf logs with std logger using Printf function.

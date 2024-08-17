@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kilianpaquier/cli-sdk/pkg/cfs"
-	"github.com/kilianpaquier/cli-sdk/pkg/clog"
 	"github.com/kilianpaquier/cli-sdk/pkg/upgrade"
 )
 
@@ -27,12 +26,14 @@ func toPtr[T any](in T) *T {
 
 func TestRun(t *testing.T) {
 	ctx := context.Background()
-	log := clog.Std()
 
 	// setup github / go-getter mocking
 	httpClient := cleanhttp.DefaultClient()
 	httpmock.ActivateNonDefault(httpClient)
 	t.Cleanup(httpmock.DeactivateAndReset)
+
+	// download path defined in run.go for a
+	getterCleanup := func() { assert.NoError(t, os.RemoveAll(filepath.Join(os.TempDir(), "repo"))) }
 
 	getReleases := upgrade.GithubReleases("owner", "repo")
 
@@ -115,7 +116,7 @@ func TestRun(t *testing.T) {
 				{
 					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: toPtr("suffix missing"), BrowserDownloadURL: toPtr("some URL")},
+						{Name: toPtr("bad asset name"), BrowserDownloadURL: toPtr("some URL")},
 					},
 				},
 			}))
@@ -137,8 +138,8 @@ func TestRun(t *testing.T) {
 				{
 					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: toPtr("http://example.com/asset/download")},
-						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: toPtr("http://example.com/asset/download")},
+						{Name: toPtr(fmt.Sprintf("repo_%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: toPtr("http://example.com/asset/download")},
+						{Name: toPtr(fmt.Sprintf("repo_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: toPtr("http://example.com/asset/download")},
 					},
 				},
 			}))
@@ -155,25 +156,27 @@ func TestRun(t *testing.T) {
 		// Arrange
 		t.Cleanup(httpmock.Reset)
 		releasesURL := "https://api.github.com/repos/owner/repo/releases?page=1&per_page=100"
-		downloadURL := "http://example.com/asset/download/repo"
+		downloadURL := "http://example.com/asset/download/repo.txt"
 		httpmock.RegisterResponder(http.MethodGet, releasesURL,
 			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
 				{
 					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
-						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("repo_Linux_%s.tar.gz", runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
 					},
 				},
 			}))
+		t.Cleanup(getterCleanup)
 		httpmock.RegisterResponder(http.MethodGet, downloadURL,
-			httpmock.NewStringResponder(http.StatusOK, "some text for a file")) // go-getter doesn't really download anything sadly
+			httpmock.NewStringResponder(http.StatusOK, "some text for a file"))
+
+		t.Cleanup(func() { assert.NoError(t, os.RemoveAll(filepath.Join(os.TempDir(), "repo"))) })
 
 		// Act
 		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
+			upgrade.WithAssetTemplate(`{{ .Repo }}_{{ title "linux" }}_{{ .GOARCH }}.tar.gz`),
 			upgrade.WithDestination(t.TempDir()),
-			upgrade.WithHTTPClient(httpClient),
-			upgrade.WithLogger(log))
+			upgrade.WithHTTPClient(httpClient))
 
 		// Assert
 		assert.ErrorContains(t, err, "safe move")
@@ -193,12 +196,11 @@ func TestRun(t *testing.T) {
 		// Act
 		err := upgrade.Run(ctx, "repo", "", getReleases,
 			upgrade.WithDestination(dest),
-			upgrade.WithHTTPClient(httpClient),
-			upgrade.WithLogger(log))
+			upgrade.WithHTTPClient(httpClient))
 
 		// Assert
 		assert.NoError(t, err)
-		assert.Equal(t, httpmock.GetTotalCallCount(), 1)
+		assert.Equal(t, 1, httpmock.GetTotalCallCount())
 		assert.NoDirExists(t, dest)
 	})
 
@@ -212,31 +214,28 @@ func TestRun(t *testing.T) {
 				{
 					TagName: toPtr("v1.0.1-beta.1"),
 					Assets: []*github.ReleaseAsset{
-						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
-						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("repo_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
 					},
 				},
 			}))
-		httpmock.RegisterResponder(http.MethodGet, downloadURL,
-			httpmock.NewStringResponder(http.StatusOK, "some text for a file")) // go-getter doesn't really download anything sadly
 
 		dest := t.TempDir()
-		require.NoError(t, os.MkdirAll(filepath.Join(dest, "repo-pre"), cfs.RwxRxRxRx))
-		require.NoError(t, os.MkdirAll(filepath.Join(dest, "repo-pre.exe"), cfs.RwxRxRxRx))
+		require.NoError(t, os.MkdirAll(filepath.Join(dest, "repo-beta"), cfs.RwxRxRxRx))
+		require.NoError(t, os.MkdirAll(filepath.Join(dest, "repo-beta.exe"), cfs.RwxRxRxRx))
 
 		// Act
 		err := upgrade.Run(ctx, "repo", "v1.0.1-beta.1", getReleases,
+			upgrade.WithAssetTemplate("{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}.tar.gz"),
 			upgrade.WithDestination(dest),
 			upgrade.WithHTTPClient(httpClient),
-			upgrade.WithLogger(log),
-			upgrade.WithPrerelease(true))
+			upgrade.WithPrereleases(true))
 
 		// Assert
 		assert.NoError(t, err)
-		assert.Equal(t, httpmock.GetTotalCallCount(), 1)
+		assert.Equal(t, 1, httpmock.GetTotalCallCount())
 	})
 
-	t.Run("success_download", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		// Arrange
 		t.Cleanup(httpmock.Reset)
 		releasesURL := "https://api.github.com/repos/owner/repo/releases?page=1&per_page=100"
@@ -246,35 +245,28 @@ func TestRun(t *testing.T) {
 				{
 					TagName: toPtr("v1.0.0"),
 					Assets: []*github.ReleaseAsset{
-						{Name: toPtr(fmt.Sprintf("%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
-						{Name: toPtr(fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("repo_%s_%s.zip", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
+						{Name: toPtr(fmt.Sprintf("repo_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
 					},
 				},
 			}))
+		t.Cleanup(getterCleanup)
 		httpmock.RegisterResponder(http.MethodGet, downloadURL,
-			httpmock.NewStringResponder(http.StatusOK, "some text for a file")) // go-getter doesn't really download anything sadly
+			httpmock.NewStringResponder(http.StatusOK, "some text for a file"))
 
-		tmp := filepath.Join(os.TempDir(), "repo", "v1.0.0")
-		require.NoError(t, os.MkdirAll(tmp, cfs.RwxRxRxRx))
-		t.Cleanup(func() { assert.NoError(t, os.RemoveAll(filepath.Dir(tmp))) })
-		if runtime.GOOS == "windows" {
-			file, err := os.Create(filepath.Join(tmp, "repo.exe")) // create windows file
-			require.NoError(t, err)
-			require.NoError(t, file.Close())
-		} else {
-			file, err := os.Create(filepath.Join(tmp, "repo")) // create linux file
-			require.NoError(t, err)
-			require.NoError(t, file.Close())
-		}
+		dest := t.TempDir()
 
 		// Act
 		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
-			upgrade.WithDestination(t.TempDir()),
+			upgrade.WithDestination(dest),
 			upgrade.WithHTTPClient(httpClient),
-			upgrade.WithLogger(log))
+			upgrade.WithTargetTemplate("{{ .Repo }}"))
 
 		// Assert
 		assert.NoError(t, err)
+		bytes, err := os.ReadFile(filepath.Join(dest, "repo"))
+		assert.NoError(t, err)
+		assert.Equal(t, []byte("some text for a file"), bytes)
 	})
 }
 
@@ -282,10 +274,9 @@ func TestFindRelease(t *testing.T) {
 	t.Run("success_no_releases", func(t *testing.T) {
 		// Arrange
 		releases := []upgrade.Release{}
-		options := upgrade.NewReleaseOptions("", "", false)
 
 		// Act
-		_, ok := upgrade.FindRelease(releases, options)
+		_, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{})
 
 		// Assert
 		assert.False(t, ok)
@@ -296,70 +287,31 @@ func TestFindRelease(t *testing.T) {
 		releases := []upgrade.Release{
 			{TagName: "no_semver"},
 		}
-		options := upgrade.NewReleaseOptions("", "", false)
 
 		// Act
-		_, ok := upgrade.FindRelease(releases, options)
+		_, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{})
 
 		// Assert
 		assert.False(t, ok)
 	})
 
-	t.Run("success_major_option_older", func(t *testing.T) {
+	t.Run("success_major_option", func(t *testing.T) {
 		// Arrange
 		releases := []upgrade.Release{
 			{TagName: "v1.7.8"},
 			{TagName: "v2.0.0"},
 			{TagName: "v2.0.5"},
 		}
-		options := upgrade.NewReleaseOptions("v2", "", false)
 
 		// Act
-		release, ok := upgrade.FindRelease(releases, options)
+		release, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{Major: "v2"})
 
 		// Assert
 		assert.True(t, ok)
 		assert.Equal(t, &upgrade.Release{TagName: "v2.0.5"}, release)
 	})
 
-	t.Run("success_major_option_newer", func(t *testing.T) {
-		// Arrange
-		releases := []upgrade.Release{
-			{TagName: "v2.7.8"},
-			{TagName: "v3.0.0"},
-			{TagName: "v3.0.5"},
-		}
-		options := upgrade.NewReleaseOptions("v3", "", false)
-
-		// Act
-		release, ok := upgrade.FindRelease(releases, options)
-
-		// Assert
-		assert.True(t, ok)
-		assert.Equal(t, &upgrade.Release{TagName: "v3.0.5"}, release)
-	})
-
-	t.Run("success_minor_option_older", func(t *testing.T) {
-		// Arrange
-		releases := []upgrade.Release{
-			{TagName: "v2.3.8"},
-			{TagName: "v2.5.3"},
-			{TagName: "v2.5.8"},
-			{TagName: "v2.7.8"},
-			{TagName: "v3.0.0"},
-			{TagName: "v3.0.5"},
-		}
-		options := upgrade.NewReleaseOptions("", "v2.5", false)
-
-		// Act
-		release, ok := upgrade.FindRelease(releases, options)
-
-		// Assert
-		assert.True(t, ok)
-		assert.Equal(t, &upgrade.Release{TagName: "v2.5.8"}, release)
-	})
-
-	t.Run("success_minor_option_newer", func(t *testing.T) {
+	t.Run("success_minor_option", func(t *testing.T) {
 		// Arrange
 		releases := []upgrade.Release{
 			{TagName: "v1.7.8"},
@@ -370,10 +322,9 @@ func TestFindRelease(t *testing.T) {
 			{TagName: "v3.0.0"},
 			{TagName: "v3.0.5"},
 		}
-		options := upgrade.NewReleaseOptions("", "v2.5", false)
 
 		// Act
-		release, ok := upgrade.FindRelease(releases, options)
+		release, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{Minor: "v2.5"})
 
 		// Assert
 		assert.True(t, ok)
@@ -390,10 +341,9 @@ func TestFindRelease(t *testing.T) {
 			{TagName: "v4.5.7"},
 			{TagName: "v4.5.8-beta.2"},
 		}
-		options := upgrade.NewReleaseOptions("", "", true)
 
 		// Act
-		release, ok := upgrade.FindRelease(releases, options)
+		release, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{Prereleases: true})
 
 		// Assert
 		assert.True(t, ok)
@@ -409,10 +359,9 @@ func TestFindRelease(t *testing.T) {
 			{TagName: "v4.5.7-beta.1"},
 			{TagName: "v4.5.7"},
 		}
-		options := upgrade.NewReleaseOptions("", "", true)
 
 		// Act
-		release, ok := upgrade.FindRelease(releases, options)
+		release, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{Prereleases: true})
 
 		// Assert
 		assert.True(t, ok)
@@ -428,10 +377,8 @@ func TestFindRelease(t *testing.T) {
 			{TagName: "v4.5.7"},
 			{TagName: "v4.5.8-beta.1"},
 		}
-		options := upgrade.NewReleaseOptions("", "", false)
-
 		// Act
-		release, ok := upgrade.FindRelease(releases, options)
+		release, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{})
 
 		// Assert
 		assert.True(t, ok)
@@ -448,10 +395,9 @@ func TestFindRelease(t *testing.T) {
 			{TagName: "v4.5.7"},
 			{TagName: "v2.3.8"},
 		}
-		options := upgrade.NewReleaseOptions("", "", false)
 
 		// Act
-		release, ok := upgrade.FindRelease(releases, options)
+		release, ok := upgrade.FindRelease(releases, upgrade.ReleaseOptions{})
 
 		// Assert
 		assert.True(t, ok)
@@ -508,84 +454,5 @@ func TestGetDownloadURL(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, "tar.gz URL?checksum=file:checksum URL", url)
-	})
-}
-
-func TestBinaryName(t *testing.T) {
-	t.Run("success_major", func(t *testing.T) {
-		// Arrange
-		options := upgrade.NewReleaseOptions("v1", "", false)
-
-		// Act
-		name := upgrade.BinaryName("repo", "", "v1.5.6", options)
-
-		// Assert
-		assert.Equal(t, "repo-v1", name)
-	})
-
-	t.Run("success_major_prerelease", func(t *testing.T) {
-		// Arrange
-		options := upgrade.NewReleaseOptions("v1", "", true)
-
-		// Act
-		name := upgrade.BinaryName("repo", "", "v1.5.6-beta.1", options)
-
-		// Assert
-		assert.Equal(t, "repo-v1-pre", name)
-	})
-
-	t.Run("success_minor", func(t *testing.T) {
-		// Arrange
-		options := upgrade.NewReleaseOptions("", "v1.5", false)
-
-		// Act
-		name := upgrade.BinaryName("repo", "", "v1.5.6", options)
-
-		// Assert
-		assert.Equal(t, "repo-v1.5", name)
-	})
-
-	t.Run("success_minor_prerelease", func(t *testing.T) {
-		// Arrange
-		options := upgrade.NewReleaseOptions("", "v1.5", true)
-
-		// Act
-		name := upgrade.BinaryName("repo", "", "v1.5.6-beta.1", options)
-
-		// Assert
-		assert.Equal(t, "repo-v1.5-pre", name)
-	})
-
-	t.Run("success_prerelease", func(t *testing.T) {
-		// Arrange
-		options := upgrade.NewReleaseOptions("", "", true)
-
-		// Act
-		name := upgrade.BinaryName("repo", "", "v1.5.6-beta.1", options)
-
-		// Assert
-		assert.Equal(t, "repo-pre", name)
-	})
-
-	t.Run("success_latest_prerelease", func(t *testing.T) {
-		// Arrange
-		options := upgrade.NewReleaseOptions("", "", true)
-
-		// Act
-		name := upgrade.BinaryName("repo", ".sh", "v1.5.6", options)
-
-		// Assert
-		assert.Equal(t, "repo.sh", name)
-	})
-
-	t.Run("success_latest", func(t *testing.T) {
-		// Arrange
-		options := upgrade.NewReleaseOptions("", "", false)
-
-		// Act
-		name := upgrade.BinaryName("repo", ".exe", "v1.5.6", options)
-
-		// Assert
-		assert.Equal(t, "repo.exe", name)
 	})
 }
