@@ -25,7 +25,7 @@ Example:
 		// project name, used to define the final binary name
 		// suffixed by '-' and the major version in case it's given with WithMajor
 		// suffixed by '-' and the minor version in case it's given with WithMinor
-		// suffixed by '-pre' in case prerelease option is given with WithPrerelease
+		// suffixed by '-beta' or '-alpha' or '-pre', etc. in case prereleases option is given with WithPrereleases
 		// and the installed release is in fact a prerelease
 		//
 		// still, can be tuned with upgrade.WithTargetTemplate function (see associated doc)
