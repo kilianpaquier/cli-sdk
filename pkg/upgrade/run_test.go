@@ -276,7 +276,9 @@ func TestRun(t *testing.T) {
 		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
 			upgrade.WithDestination(dest),
 			upgrade.WithHTTPClient(httpClient),
-			upgrade.WithTargetTemplate("{{ .Repo }}"))
+			upgrade.WithTargetTemplate("{{ .Repo }}"),
+			upgrade.WithMajor(""),
+			upgrade.WithMinor(""))
 
 		// Assert
 		assert.NoError(t, err)

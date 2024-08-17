@@ -95,7 +95,7 @@ func WithTargetTemplate(targetTemplate string) RunOption {
 func WithMajor(major string) RunOption {
 	return func(o *option) error {
 		o.Major = major
-		if !_majorRegexp.MatchString(major) {
+		if o.Major != "" && !_majorRegexp.MatchString(major) {
 			return fmt.Errorf("invalid major version '%s'", major)
 		}
 		return nil
@@ -108,7 +108,7 @@ func WithMajor(major string) RunOption {
 func WithMinor(minor string) RunOption {
 	return func(o *option) error {
 		o.Minor = minor
-		if !_minorRegexp.MatchString(minor) {
+		if o.Minor != "" && !_minorRegexp.MatchString(minor) {
 			return fmt.Errorf("invalid minor version '%s'", minor)
 		}
 		return nil
