@@ -16,7 +16,7 @@ func GithubReleases(owner, repo string) func(ctx context.Context, httpClient *ht
 	toReleases := func(releases []*github.RepositoryRelease) []Release {
 		result := make([]Release, 0, len(releases))
 		for _, release := range releases {
-			if release == nil || release.TagName == nil || release.GetDraft() {
+			if release == nil || release.TagName == nil {
 				continue
 			}
 			r := Release{

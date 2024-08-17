@@ -110,6 +110,15 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 		return fmt.Errorf("get asset name: %w", err)
 	}
 
+	if err := downloadAndMove(ctx, o.HTTPClient, repo, release, assetName, dest); err != nil {
+		return err
+	}
+	o.Log.Infof("successfully installed version '%s' in '%s'", release.TagName, dest)
+	return nil
+}
+
+// downloadAndMove downloads the provided assetName (if it exists) from the release and moves it into provided dest.
+func downloadAndMove(ctx context.Context, httpClient *http.Client, repo string, release *Release, assetName, dest string) error {
 	url, err := getDownloadURL(release, assetName)
 	if err != nil {
 		return fmt.Errorf("get download url: %w", err)
@@ -117,7 +126,7 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 
 	get := getter.Client{
 		DisableSymlinks: true,
-		Getters:         []getter.Getter{&getter.HttpGetter{Client: o.HTTPClient, XTerraformGetDisabled: true}},
+		Getters:         []getter.Getter{&getter.HttpGetter{Client: httpClient, XTerraformGetDisabled: true}},
 	}
 	// download in temporary directory the release (since we only want to move, rename and keep the binary)
 	tmp := filepath.Join(os.TempDir(), repo, release.TagName)
@@ -125,11 +134,19 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 		return fmt.Errorf("download asset(s): %w", err)
 	}
 
+	var p string
+	if file := filepath.Join(tmp, filepath.Base(url)); cfs.Exists(file) {
+		p = file
+	} else if file := filepath.Join(tmp, repo+binExt()); cfs.Exists(file) {
+		p = file
+	} else {
+		return errors.New("unable to determine binary name to install, please open a issue")
+	}
+
 	// move safely (as the current binary could be running) the newest version in place
-	if err := cfs.SafeMove(filepath.Join(tmp, repo+binExt()), dest, cfs.WithPerm(cfs.RwxRxRxRx)); err != nil {
+	if err := cfs.SafeMove(p, dest, cfs.WithPerm(cfs.RwxRxRxRx)); err != nil {
 		return fmt.Errorf("safe move: %w", err)
 	}
-	o.Log.Infof("successfully installed version '%s' in '%s'", release.TagName, dest)
 	return nil
 }
 

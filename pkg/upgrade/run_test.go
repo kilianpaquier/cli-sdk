@@ -107,6 +107,52 @@ func TestRun(t *testing.T) {
 		assert.ErrorContains(t, err, fmt.Sprintf("get releases: list releases: %s %s", http.MethodGet, url))
 	})
 
+	t.Run("error_invalid_target_name", func(t *testing.T) {
+		// Arrange
+		t.Cleanup(httpmock.Reset)
+		url := "https://api.github.com/repos/owner/repo/releases?page=1&per_page=100"
+		httpmock.RegisterResponder(http.MethodGet, url,
+			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
+				{
+					TagName: toPtr("v1.0.0"),
+					Assets: []*github.ReleaseAsset{
+						{Name: toPtr("some name"), BrowserDownloadURL: toPtr("some URL")},
+					},
+				},
+			}))
+
+		// Act
+		err := upgrade.Run(ctx, "repo", "", getReleases,
+			upgrade.WithTargetTemplate("{{ func }}"),
+			upgrade.WithHTTPClient(httpClient))
+
+		// Assert
+		assert.ErrorContains(t, err, "get target name")
+	})
+
+	t.Run("error_invalid_asset_name", func(t *testing.T) {
+		// Arrange
+		t.Cleanup(httpmock.Reset)
+		url := "https://api.github.com/repos/owner/repo/releases?page=1&per_page=100"
+		httpmock.RegisterResponder(http.MethodGet, url,
+			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
+				{
+					TagName: toPtr("v1.0.0"),
+					Assets: []*github.ReleaseAsset{
+						{Name: toPtr("some name"), BrowserDownloadURL: toPtr("some URL")},
+					},
+				},
+			}))
+
+		// Act
+		err := upgrade.Run(ctx, "repo", "", getReleases,
+			upgrade.WithAssetTemplate("{{ func }}"),
+			upgrade.WithHTTPClient(httpClient))
+
+		// Assert
+		assert.ErrorContains(t, err, "get asset name")
+	})
+
 	t.Run("error_no_valid_asset", func(t *testing.T) {
 		// Arrange
 		t.Cleanup(httpmock.Reset)
@@ -150,36 +196,6 @@ func TestRun(t *testing.T) {
 		// Assert
 		assert.ErrorContains(t, err, "download asset(s)")
 		assert.ErrorContains(t, err, "http://example.com/asset/download")
-	})
-
-	t.Run("error_safe_move", func(t *testing.T) {
-		// Arrange
-		t.Cleanup(httpmock.Reset)
-		releasesURL := "https://api.github.com/repos/owner/repo/releases?page=1&per_page=100"
-		downloadURL := "http://example.com/asset/download/repo.txt"
-		httpmock.RegisterResponder(http.MethodGet, releasesURL,
-			httpmock.NewJsonResponderOrPanic(http.StatusOK, []*github.RepositoryRelease{
-				{
-					TagName: toPtr("v1.0.0"),
-					Assets: []*github.ReleaseAsset{
-						{Name: toPtr(fmt.Sprintf("repo_Linux_%s.tar.gz", runtime.GOARCH)), BrowserDownloadURL: &downloadURL},
-					},
-				},
-			}))
-		t.Cleanup(getterCleanup)
-		httpmock.RegisterResponder(http.MethodGet, downloadURL,
-			httpmock.NewStringResponder(http.StatusOK, "some text for a file"))
-
-		t.Cleanup(func() { assert.NoError(t, os.RemoveAll(filepath.Join(os.TempDir(), "repo"))) })
-
-		// Act
-		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
-			upgrade.WithAssetTemplate(`{{ .Repo }}_{{ title "linux" }}_{{ .GOARCH }}.tar.gz`),
-			upgrade.WithDestination(t.TempDir()),
-			upgrade.WithHTTPClient(httpClient))
-
-		// Assert
-		assert.ErrorContains(t, err, "safe move")
 	})
 
 	t.Run("success_no_appropriate_release", func(t *testing.T) {
@@ -259,8 +275,7 @@ func TestRun(t *testing.T) {
 		// Act
 		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
 			upgrade.WithDestination(dest),
-			upgrade.WithHTTPClient(httpClient),
-			upgrade.WithTargetTemplate("{{ .Repo }}"))
+			upgrade.WithHTTPClient(httpClient))
 
 		// Assert
 		assert.NoError(t, err)
