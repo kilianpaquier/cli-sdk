@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	// ErrNoGetRelease is the error returned by Run when the input getReleases isn't given.
-	ErrNoGetRelease = errors.New("getReleases func must not be nil")
+	// ErrNoGetReleases is the error returned by Run when the input getReleases isn't given.
+	ErrNoGetReleases = errors.New("getReleases func must not be nil")
 
 	// ErrNoProjectName is the erreur returned by Run when the input projectName isn't given.
 	ErrNoProjectName = errors.New("projectName must not be empty")
@@ -55,12 +55,12 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 		return ErrNoProjectName
 	}
 	if getReleases == nil {
-		return ErrNoGetRelease
+		return ErrNoGetReleases
 	}
 
 	o, err := newOpt(opts...)
 	if err != nil {
-		return fmt.Errorf("parsing options: %w", err)
+		return err
 	}
 
 	releases, err := getReleases(ctx, o.HTTPClient)

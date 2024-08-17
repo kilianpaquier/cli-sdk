@@ -3,18 +3,11 @@ package upgrade
 import (
 	"bytes"
 	"fmt"
-	"regexp"
 	"strings"
 	"text/template"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-)
-
-var (
-	_majorRegexp = regexp.MustCompile("^v[0-9]+$")
-	_minorRegexp = regexp.MustCompile(`^v[0-9]+\.[0-9]+$`)
-	_wordRegexp  = regexp.MustCompile(`[a-zA-Z]+`)
 )
 
 // getTemplateValue takes an input template value and returns the parsed result.

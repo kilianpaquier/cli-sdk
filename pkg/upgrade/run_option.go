@@ -6,14 +6,26 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/hashicorp/go-cleanhttp"
 
 	"github.com/kilianpaquier/cli-sdk/pkg/clog"
 )
 
-// ErrMajorMinorExclusive is the error returned when both options WithMajor and WithMinor are given and non empty.
-var ErrMajorMinorExclusive = errors.New("both major and minor option are mutually exclusive")
+var (
+	_majorRegexp = regexp.MustCompile("^v[0-9]+$")
+	_minorRegexp = regexp.MustCompile(`^v[0-9]+\.[0-9]+$`)
+	_wordRegexp  = regexp.MustCompile(`[a-zA-Z]+`)
+)
+
+var (
+	// ErrMajorMinorExclusive is the error returned when both options WithMajor and WithMinor are given and non empty.
+	ErrMajorMinorExclusive = errors.New("both major and minor option are mutually exclusive")
+
+	// ErrInvalidOptions is the error returned when there's at least one invalid option.
+	ErrInvalidOptions = errors.New("invalid options")
+)
 
 // RunOption is the right function to tune Run function with specific behaviors.
 type RunOption func(*option) error
@@ -143,14 +155,19 @@ func newOpt(opts ...RunOption) (option, error) {
 
 	var errs []error
 	for _, opt := range opts {
-		if opt != nil {
-			errs = append(errs, opt(o))
+		if opt == nil {
+			continue
+		}
+		if err := opt(o); err != nil {
+			errs = append(errs, err)
 		}
 	}
-
 	// ensure major and minor aren't given together since there're mutually exclusive
 	if o.Major != "" && o.Minor != "" {
 		errs = append(errs, ErrMajorMinorExclusive)
+	}
+	if len(errs) > 0 {
+		errs = append(errs, ErrInvalidOptions)
 	}
 
 	if o.AssetTemplate == "" {
@@ -176,5 +193,6 @@ func newOpt(opts ...RunOption) (option, error) {
 {{- if and .Opts.Prereleases (ne .Prerelease "") }}{{ print "-" .Prerelease }}{{ end }}
 {{- .BinExt }}`
 	}
+
 	return *o, errors.Join(errs...)
 }

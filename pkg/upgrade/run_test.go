@@ -50,7 +50,7 @@ func TestRun(t *testing.T) {
 		err := upgrade.Run(ctx, "repo", "", nil)
 
 		// Assert
-		assert.ErrorIs(t, err, upgrade.ErrNoGetRelease)
+		assert.ErrorIs(t, err, upgrade.ErrNoGetReleases)
 	})
 
 	t.Run("error_invalid_major_option", func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestRun(t *testing.T) {
 		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMajor("invalid"))
 
 		// Assert
-		assert.ErrorContains(t, err, "parsing options")
+		assert.ErrorContains(t, err, upgrade.ErrInvalidOptions.Error())
 		assert.ErrorContains(t, err, "invalid major version")
 	})
 
@@ -67,7 +67,7 @@ func TestRun(t *testing.T) {
 		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMinor("invalid"))
 
 		// Assert
-		assert.ErrorContains(t, err, "parsing options")
+		assert.ErrorContains(t, err, upgrade.ErrInvalidOptions.Error())
 		assert.ErrorContains(t, err, "invalid minor version")
 	})
 
@@ -76,7 +76,7 @@ func TestRun(t *testing.T) {
 		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMajor("v1"), upgrade.WithMinor("v4.3"))
 
 		// Assert
-		assert.ErrorContains(t, err, "parsing options")
+		assert.ErrorContains(t, err, upgrade.ErrInvalidOptions.Error())
 		assert.ErrorContains(t, err, upgrade.ErrMajorMinorExclusive.Error())
 	})
 
