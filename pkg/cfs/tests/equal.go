@@ -52,37 +52,47 @@ func EqualFiles(expected, actual string) error {
 // the resulted comparison may fail since all read files are stored in a map.
 // It's a limitation that you should keep in mind and that may be fixed in the future (but it's not a priority for now).
 func EqualDirs(expected, actual string) error {
+	expectabs, err := filepath.Abs(expected)
+	if err != nil {
+		return fmt.Errorf("absolute path: %w", err)
+	}
+
 	// read all files in expected directory
-	expectedFiles, err := readDir(expected)
+	expectfiles, err := readDir(expectabs, expectabs)
 	if err != nil {
 		return fmt.Errorf("read expected dir: %w", err)
 	}
 
+	actualabs, err := filepath.Abs(actual)
+	if err != nil {
+		return fmt.Errorf("absolute path: %w", err)
+	}
+
 	// read all files in actual directory
-	actualFiles, err := readDir(actual)
+	actualfiles, err := readDir(actualabs, actualabs)
 	if err != nil {
 		return fmt.Errorf("read actual dir: %w", err)
 	}
 
 	// check all expected contents against actual contents
 	var errs []error
-	for filename, expectedBytes := range expectedFiles {
-		actualBytes, ok := actualFiles[filename]
+	for relpath, expectedBytes := range expectfiles {
+		actualBytes, ok := actualfiles[relpath]
 		if !ok {
-			errs = append(errs, fmt.Errorf("missing file %s from actual", filename))
+			errs = append(errs, fmt.Errorf("missing file %s from actual", relpath))
 			continue
 		}
 
-		diffs := Diff(filename, expectedBytes, filename, actualBytes)
+		diffs := Diff(relpath, expectedBytes, relpath, actualBytes)
 		if len(diffs) > 0 {
 			errs = append(errs, fmt.Errorf("there're some differences between actual and expected: %s", string(diffs)))
 		}
 	}
 
 	// check that there're no actual files that aren't present in expected files
-	for filename := range actualFiles {
-		if _, ok := expectedFiles[filename]; !ok {
-			errs = append(errs, fmt.Errorf("missing file %s from expected", filename))
+	for relpath := range actualfiles {
+		if _, ok := expectfiles[relpath]; !ok {
+			errs = append(errs, fmt.Errorf("missing file %s from expected", relpath))
 		}
 	}
 	return errors.Join(errs...)
@@ -91,27 +101,27 @@ func EqualDirs(expected, actual string) error {
 // readDir reads a given input directory (and its subdirectories) and returns a map with filenames as keys and content (string) as values.
 //
 // Collision will occur in case a two files with the same name exists (between root and subdirectory).
-func readDir(srcdir string) (map[string][]byte, error) {
+func readDir(initialdir string, currentdir string) (map[string][]byte, error) {
 	files := map[string][]byte{}
 
-	entries, err := os.ReadDir(srcdir)
+	entries, err := os.ReadDir(currentdir)
 	if err != nil {
 		return nil, fmt.Errorf("read dir: %w", err)
 	}
 
 	errs := make([]error, 0, len(entries))
 	for _, entry := range entries {
-		src := filepath.Join(srcdir, entry.Name())
+		src := filepath.Join(currentdir, entry.Name())
 
 		// handle directories
 		if entry.IsDir() {
-			sub, err := readDir(src)
+			sub, err := readDir(initialdir, src)
 			if err != nil {
 				errs = append(errs, err) // only case of error is if reading an entry fails
+				continue
 			}
 
 			for filename, content := range sub {
-				// NOTE collision on identical filenames between root and subdirectories
 				files[filename] = content
 			}
 			continue
@@ -123,7 +133,19 @@ func readDir(srcdir string) (map[string][]byte, error) {
 			errs = append(errs, fmt.Errorf("read file: %w", err))
 			continue
 		}
-		files[entry.Name()] = FilterCarriage(bytes)
+
+		abspath, err := filepath.Abs(src)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("absolute path: %w", err))
+			continue
+		}
+
+		relpath, err := filepath.Rel(initialdir, abspath)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("relative path: %w", err))
+			continue
+		}
+		files[relpath] = FilterCarriage(bytes)
 	}
 	return files, errors.Join(errs...)
 }
