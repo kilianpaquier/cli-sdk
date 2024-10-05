@@ -48,7 +48,7 @@ func TestCopyFile(t *testing.T) {
 		err := cfs.CopyFile(src, dest)
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.FileExists(t, dest)
 	})
 
@@ -60,7 +60,7 @@ func TestCopyFile(t *testing.T) {
 			cfs.WithPerm(cfs.RwRR))
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.FileExists(t, dest)
 	})
 }
@@ -161,9 +161,9 @@ func TestSafeMove(t *testing.T) {
 		err := cfs.SafeMove(src, dest)
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		bytes, err := os.ReadFile(dest)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, []byte("some text"), bytes)
 	})
 }

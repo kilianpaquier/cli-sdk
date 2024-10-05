@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kilianpaquier/cli-sdk/pkg/upgrade"
 )
@@ -55,7 +56,7 @@ func TestGithubReleases(t *testing.T) {
 		releases, err := getReleases(ctx, httpClient)
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, []upgrade.Release{
 			{TagName: "v1.0.0", Assets: []upgrade.Asset{}},
 			{TagName: "v1.0.1", Assets: []upgrade.Asset{}},

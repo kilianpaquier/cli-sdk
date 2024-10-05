@@ -8,14 +8,14 @@ import (
 )
 
 // Option represents a function taking an opt client to use filesysem package functions.
-type Option func(opt option) option
+type Option func(opt options) options
 
 // Join represents a function to join multiple elements between them.
 type Join func(elems ...string) string
 
 // WithJoin specifies a specific function to join a srcdir with one of its files in CopyDir.
 func WithJoin(join Join) Option {
-	return func(o option) option {
+	return func(o options) options {
 		o.join = join
 		return o
 	}
@@ -23,7 +23,7 @@ func WithJoin(join Join) Option {
 
 // WithPerm specifies the permission for target file for CopyFile and CopyDir.
 func WithPerm(perm os.FileMode) Option {
-	return func(o option) option {
+	return func(o options) options {
 		o.perm = perm
 		return o
 	}
@@ -31,20 +31,20 @@ func WithPerm(perm os.FileMode) Option {
 
 // WithFS specifies a FS to read files instead of os filesystem.
 func WithFS(fsys FS) Option {
-	return func(o option) option {
+	return func(o options) options {
 		o.fsys = fsys
 		return o
 	}
 }
 
-type option struct {
+type options struct {
 	fsys FS
 	join Join
 	perm os.FileMode
 }
 
-func newOpt(opts ...Option) option {
-	o := option{}
+func newOpt(opts ...Option) options {
+	var o options
 	for _, opt := range opts {
 		if opt != nil {
 			o = opt(o)

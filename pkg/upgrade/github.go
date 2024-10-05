@@ -15,23 +15,23 @@ import (
 func GithubReleases(owner, repo string) func(ctx context.Context, httpClient *http.Client) ([]Release, error) {
 	toReleases := func(releases []*github.RepositoryRelease) []Release {
 		result := make([]Release, 0, len(releases))
-		for _, release := range releases {
-			if release == nil || release.TagName == nil {
+		for _, r := range releases {
+			if r == nil || r.TagName == nil {
 				continue
 			}
-			r := Release{
-				Assets:  make([]Asset, 0, len(release.Assets)),
-				TagName: *release.TagName,
+			release := Release{
+				Assets:  make([]Asset, 0, len(r.Assets)),
+				TagName: *r.TagName,
 			}
 
-			for _, asset := range release.Assets {
+			for _, asset := range r.Assets {
 				if asset == nil || asset.Name == nil || asset.BrowserDownloadURL == nil {
 					continue
 				}
-				r.Assets = append(r.Assets, Asset{DownloadURL: *asset.BrowserDownloadURL, Name: *asset.Name})
+				release.Assets = append(release.Assets, Asset{DownloadURL: *asset.BrowserDownloadURL, Name: *asset.Name})
 			}
 
-			result = append(result, r)
+			result = append(result, release)
 		}
 		return result
 	}

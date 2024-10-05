@@ -215,7 +215,7 @@ func TestRun(t *testing.T) {
 			upgrade.WithHTTPClient(httpClient))
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 1, httpmock.GetTotalCallCount())
 		assert.NoDirExists(t, dest)
 	})
@@ -247,7 +247,7 @@ func TestRun(t *testing.T) {
 			upgrade.WithPrereleases(true))
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 1, httpmock.GetTotalCallCount())
 	})
 
@@ -281,9 +281,9 @@ func TestRun(t *testing.T) {
 			upgrade.WithMinor(""))
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		bytes, err := os.ReadFile(filepath.Join(dest, "repo"))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, []byte("some text for a file"), bytes)
 	})
 }
@@ -450,7 +450,7 @@ func TestGetDownloadURL(t *testing.T) {
 		url, err := upgrade.GetDownloadURL(release, fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH))
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "tar.gz URL", url)
 	})
 
@@ -470,7 +470,7 @@ func TestGetDownloadURL(t *testing.T) {
 		url, err := upgrade.GetDownloadURL(release, fmt.Sprintf("%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH))
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "tar.gz URL?checksum=file:checksum URL", url)
 	})
 }

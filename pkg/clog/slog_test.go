@@ -3,6 +3,7 @@ package clog_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log/slog"
 	"testing"
 
@@ -25,7 +26,7 @@ func (*handler) Enabled(context.Context, slog.Level) bool {
 // Handle implements slog.Handler.
 func (h *handler) Handle(_ context.Context, record slog.Record) error {
 	_, err := h.buf.WriteString(record.Message)
-	return err
+	return fmt.Errorf("write string: %w", err)
 }
 
 // WithAttrs implements slog.Handler.

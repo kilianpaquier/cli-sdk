@@ -58,19 +58,19 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 		return ErrNoGetReleases
 	}
 
-	o, err := newOpt(opts...)
+	ro, err := newRunOpt(opts...)
 	if err != nil {
 		return err
 	}
 
-	releases, err := getReleases(ctx, o.httpClient)
+	releases, err := getReleases(ctx, ro.httpClient)
 	if err != nil {
 		return fmt.Errorf("get releases: %w", err)
 	}
 
-	release, ok := findRelease(releases, o.releaseOptions)
+	release, ok := findRelease(releases, ro.releaseOptions)
 	if !ok {
-		o.log.Infof("no new version found matching options")
+		ro.log.Infof("no new version found matching options")
 		return nil
 	}
 
@@ -87,33 +87,33 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 		"BinExt":     binExt(),
 		"GOARCH":     runtime.GOARCH,
 		"GOOS":       runtime.GOOS,
-		"Opts":       o.releaseOptions,
+		"Opts":       ro.releaseOptions,
 		"Prerelease": prerelease,
 		"Repo":       repo,
 		"Tag":        release.TagName,
 	}
 
-	targetName, err := getTemplateValue(o.targetTemplate, templateData)
+	targetName, err := getTemplateValue(ro.targetTemplate, templateData)
 	if err != nil {
 		return fmt.Errorf("get target name: %w", err)
 	}
-	dest := filepath.Join(o.destdir, targetName)
+	dest := filepath.Join(ro.destdir, targetName)
 
-	o.log.Infof("installing version '%s'", release.TagName)
+	ro.log.Infof("installing version '%s'", release.TagName)
 	if currentVersion == release.TagName && cfs.Exists(dest) {
-		o.log.Infof("version '%s' already installed in '%s'", release.TagName, dest)
+		ro.log.Infof("version '%s' already installed in '%s'", release.TagName, dest)
 		return nil
 	}
 
-	assetName, err := getTemplateValue(o.assetTemplate, templateData)
+	assetName, err := getTemplateValue(ro.assetTemplate, templateData)
 	if err != nil {
 		return fmt.Errorf("get asset name: %w", err)
 	}
 
-	if err := downloadAndMove(ctx, o.httpClient, repo, release, assetName, dest); err != nil {
+	if err := downloadAndMove(ctx, ro.httpClient, repo, release, assetName, dest); err != nil {
 		return err
 	}
-	o.log.Infof("successfully installed version '%s' in '%s'", release.TagName, dest)
+	ro.log.Infof("successfully installed version '%s' in '%s'", release.TagName, dest)
 	return nil
 }
 

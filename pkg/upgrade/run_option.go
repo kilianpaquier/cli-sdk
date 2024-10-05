@@ -30,7 +30,7 @@ var (
 )
 
 // RunOption is the right function to tune Run function with specific behaviors.
-type RunOption func(*option) error
+type RunOption func(*runOptions) error
 
 // WithAssetTemplate specifies the asset name to match (equal) for during asset finding (to retrieve the appropriate one to install).
 //
@@ -40,7 +40,7 @@ type RunOption func(*option) error
 //
 // Various variables are available: 'ArchiveExt', 'BinExt', 'GOOS', 'GOARCH', 'Opts' (.Major, .Minor, .Prereleases), 'Repo', 'Tag'.
 func WithAssetTemplate(assetTemplate string) RunOption {
-	return func(o *option) error {
+	return func(o *runOptions) error {
 		o.assetTemplate = assetTemplate
 		return nil
 	}
@@ -50,7 +50,7 @@ func WithAssetTemplate(assetTemplate string) RunOption {
 //
 // By default, installation destination is ${HOME}/.local/bin.
 func WithDestination(destdir string) RunOption {
-	return func(o *option) error {
+	return func(o *runOptions) error {
 		o.destdir = destdir
 		return nil
 	}
@@ -61,7 +61,7 @@ func WithDestination(destdir string) RunOption {
 //
 // By default cleanhttp.DefaultClient() will be used.
 func WithHTTPClient(client *http.Client) RunOption {
-	return func(o *option) error {
+	return func(o *runOptions) error {
 		o.httpClient = client
 		return nil
 	}
@@ -71,7 +71,7 @@ func WithHTTPClient(client *http.Client) RunOption {
 //
 // When not provided, no logging will be made.
 func WithLogger(log clog.Logger) RunOption {
-	return func(o *option) error {
+	return func(o *runOptions) error {
 		o.log = log
 		return nil
 	}
@@ -97,8 +97,8 @@ func WithLogger(log clog.Logger) RunOption {
 // or an old installation could override it too, etc.
 // Make sure you're aware of unexpected overrides.
 func WithTargetTemplate(targetTemplate string) RunOption {
-	return func(o *option) error {
-		o.targetTemplate = targetTemplate
+	return func(ro *runOptions) error {
+		ro.targetTemplate = targetTemplate
 		return nil
 	}
 }
@@ -107,9 +107,9 @@ func WithTargetTemplate(targetTemplate string) RunOption {
 //
 // By default all major versions can be used (outside of prereleases which can be included with WithPrerelease).
 func WithMajor(major string) RunOption {
-	return func(o *option) error {
-		o.Major = major
-		if o.Major != "" && !_majorRegexp.MatchString(major) {
+	return func(ro *runOptions) error {
+		ro.Major = major
+		if ro.Major != "" && !_majorRegexp.MatchString(major) {
 			return fmt.Errorf("invalid major version '%s'", major)
 		}
 		return nil
@@ -120,9 +120,9 @@ func WithMajor(major string) RunOption {
 //
 // By default all minor versions can be used (outside of prereleases which can be included with WithPrerelease).
 func WithMinor(minor string) RunOption {
-	return func(o *option) error {
-		o.Minor = minor
-		if o.Minor != "" && !_minorRegexp.MatchString(minor) {
+	return func(ro *runOptions) error {
+		ro.Minor = minor
+		if ro.Minor != "" && !_minorRegexp.MatchString(minor) {
 			return fmt.Errorf("invalid minor version '%s'", minor)
 		}
 		return nil
@@ -131,14 +131,14 @@ func WithMinor(minor string) RunOption {
 
 // WithPrereleases specifies whether prerelease versions can be considered for upgrade / installation.
 func WithPrereleases(accepted bool) RunOption {
-	return func(o *option) error {
-		o.Prereleases = accepted
+	return func(ro *runOptions) error {
+		ro.Prereleases = accepted
 		return nil
 	}
 }
 
-// option is the struct related to Option function(s) defining all optional properties.
-type option struct {
+// runOptions is the struct related to Option function(s) defining all optional properties.
+type runOptions struct {
 	releaseOptions
 
 	assetTemplate  string
@@ -148,24 +148,23 @@ type option struct {
 	targetTemplate string
 }
 
-// newOpt creates a new option struct with all input Option functions
+// newRunOpt creates a new option struct with all input Option functions
 // while taking care of default values.
 //
 // It returns an error in case some input options are invalid.
-func newOpt(opts ...RunOption) (option, error) {
-	o := option{}
-
+func newRunOpt(opts ...RunOption) (runOptions, error) {
 	var errs []error
+	var ro runOptions
 	for _, opt := range opts {
 		if opt == nil {
 			continue
 		}
-		if err := opt(&o); err != nil {
+		if err := opt(&ro); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	// ensure major and minor aren't given together since there're mutually exclusive
-	if o.Major != "" && o.Minor != "" {
+	if ro.Major != "" && ro.Minor != "" {
 		errs = append(errs, ErrMajorMinorExclusive)
 	}
 	if len(errs) > 0 {
@@ -176,24 +175,24 @@ func newOpt(opts ...RunOption) (option, error) {
 			ef = append(ef, err)
 			wraps = append(wraps, "%w")
 		}
-		return o, fmt.Errorf(strings.Join(wraps, ": "), ef...)
+		return ro, fmt.Errorf(strings.Join(wraps, ": "), ef...)
 	}
 
-	if o.assetTemplate == "" {
-		o.assetTemplate = `{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}`
+	if ro.assetTemplate == "" {
+		ro.assetTemplate = `{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}`
 	}
-	if o.destdir == "" {
+	if ro.destdir == "" {
 		home, _ := os.UserHomeDir()
-		o.destdir = filepath.Join(home, ".local", "bin")
+		ro.destdir = filepath.Join(home, ".local", "bin")
 	}
-	if o.httpClient == nil {
-		o.httpClient = cleanhttp.DefaultClient()
+	if ro.httpClient == nil {
+		ro.httpClient = cleanhttp.DefaultClient()
 	}
-	if o.log == nil {
-		o.log = clog.Noop()
+	if ro.log == nil {
+		ro.log = clog.Noop()
 	}
-	if o.targetTemplate == "" {
-		o.targetTemplate = `
+	if ro.targetTemplate == "" {
+		ro.targetTemplate = `
 {{- .Repo }}
 {{- if ne .Opts.Major "" }}{{ print "-" .Opts.Major }}
 {{- else if ne .Opts.Minor "" }}{{ print "-" .Opts.Minor }}
@@ -202,5 +201,5 @@ func newOpt(opts ...RunOption) (option, error) {
 {{- .BinExt }}`
 	}
 
-	return o, nil
+	return ro, nil
 }

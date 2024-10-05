@@ -35,7 +35,7 @@ func TestOS(t *testing.T) {
 		entries, err := fsys.ReadDir(tmp)
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, entries, 1)
 		assert.Equal(t, "hey.txt", entries[0].Name())
 	})
@@ -45,7 +45,7 @@ func TestOS(t *testing.T) {
 		bytes, err := fsys.ReadFile(name)
 
 		// Assert
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "hey !", string(bytes))
 	})
 }
