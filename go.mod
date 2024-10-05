@@ -1,8 +1,8 @@
 module github.com/kilianpaquier/cli-sdk
 
-go 1.22.0
+go 1.23
 
-toolchain go1.23.1
+toolchain go1.23.2
 
 require (
 	github.com/google/go-github/v63 v63.0.0
