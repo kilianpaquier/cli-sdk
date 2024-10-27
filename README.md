@@ -3,7 +3,6 @@
 # cli-sdk <!-- omit in toc -->
 
 <p align="center">
-  <img alt="GitHub Actions" src="https://img.shields.io/github/actions/workflow/status/kilianpaquier/cli-sdk/integration.yml?branch=main&style=for-the-badge">
   <img alt="GitHub Release" src="https://img.shields.io/github/v/release/kilianpaquier/cli-sdk?include_prereleases&sort=semver&style=for-the-badge">
   <img alt="GitHub Issues" src="https://img.shields.io/github/issues-raw/kilianpaquier/cli-sdk?style=for-the-badge">
   <img alt="GitHub License" src="https://img.shields.io/github/license/kilianpaquier/cli-sdk?style=for-the-badge">
