@@ -10,8 +10,8 @@ require (
 	github.com/hashicorp/go-getter/v2 v2.2.3
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/mod v0.21.0
-	golang.org/x/text v0.19.0
+	golang.org/x/mod v0.22.0
+	golang.org/x/text v0.20.0
 )
 
 require (
