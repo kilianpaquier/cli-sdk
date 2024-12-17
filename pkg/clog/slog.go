@@ -1,40 +1,36 @@
 package clog
 
-import "log/slog"
+import (
+	"fmt"
+	"log/slog"
+)
 
 // std is a simple implementation of Logger for log std library.
 type stdslog struct {
-	log *slog.Logger
+	logger *slog.Logger
 }
 
-var _slog Logger = &stdslog{slog.Default()} // ensure interface is implemented
-
-// Slog returns the default slog logger (slog library).
-func Slog() Logger {
-	return _slog
-}
-
-// SlogWith returns the Logger interface with input slog logger.
-func SlogWith(logger *slog.Logger) Logger {
+// Slog returns the Logger interface with input slog logger.
+func Slog(logger *slog.Logger) Logger {
 	return &stdslog{logger}
 }
 
 // Debugf logs with slog logger using Debug function.
-func (s *stdslog) Debugf(msg string, args ...any) {
-	s.log.Debug(msg, args...)
+func (s *stdslog) Debugf(format string, args ...any) {
+	s.logger.Debug(fmt.Sprintf(format, args...))
 }
 
 // Errorf logs with slog logger using Debug function.
-func (s *stdslog) Errorf(msg string, args ...any) {
-	s.log.Error(msg, args...)
+func (s *stdslog) Errorf(format string, args ...any) {
+	s.logger.Error(fmt.Sprintf(format, args...))
 }
 
 // Infof logs with slog logger using Debug function.
-func (s *stdslog) Infof(msg string, args ...any) {
-	s.log.Info(msg, args...)
+func (s *stdslog) Infof(format string, args ...any) {
+	s.logger.Info(fmt.Sprintf(format, args...))
 }
 
 // Warnf logs with slog logger using Debug function.
-func (s *stdslog) Warnf(msg string, args ...any) {
-	s.log.Warn(msg, args...)
+func (s *stdslog) Warnf(format string, args ...any) {
+	s.logger.Warn(fmt.Sprintf(format, args...))
 }

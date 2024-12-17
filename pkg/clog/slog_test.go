@@ -45,10 +45,10 @@ func TestSlogWith(t *testing.T) {
 	t.Run("debugf", func(t *testing.T) {
 		// Arrange
 		var buf bytes.Buffer
-		log := clog.SlogWith(slog.New(&handler{&buf}))
+		logger := clog.Slog(slog.New(&handler{&buf}))
 
 		// Act
-		log.Debugf("some message")
+		logger.Debugf("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")
@@ -57,10 +57,10 @@ func TestSlogWith(t *testing.T) {
 	t.Run("errorf", func(t *testing.T) {
 		// Arrange
 		var buf bytes.Buffer
-		log := clog.SlogWith(slog.New(&handler{&buf}))
+		logger := clog.Slog(slog.New(&handler{&buf}))
 
 		// Act
-		log.Errorf("some message")
+		logger.Errorf("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")
@@ -69,10 +69,10 @@ func TestSlogWith(t *testing.T) {
 	t.Run("infof", func(t *testing.T) {
 		// Arrange
 		var buf bytes.Buffer
-		log := clog.SlogWith(slog.New(&handler{&buf}))
+		logger := clog.Slog(slog.New(&handler{&buf}))
 
 		// Act
-		log.Infof("some message")
+		logger.Infof("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")
@@ -81,10 +81,10 @@ func TestSlogWith(t *testing.T) {
 	t.Run("warnf", func(t *testing.T) {
 		// Arrange
 		var buf bytes.Buffer
-		log := clog.SlogWith(slog.New(&handler{&buf}))
+		logger := clog.Slog(slog.New(&handler{&buf}))
 
 		// Act
-		log.Warnf("some message")
+		logger.Warnf("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")

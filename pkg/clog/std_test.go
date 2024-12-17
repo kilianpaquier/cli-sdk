@@ -13,12 +13,12 @@ import (
 func TestStd(t *testing.T) {
 	t.Run("debugf", func(t *testing.T) {
 		// Arrange
-		std := clog.Std()
+		logger := clog.Std(log.Default())
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 
 		// Act
-		std.Debugf("some message")
+		logger.Debugf("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")
@@ -26,12 +26,12 @@ func TestStd(t *testing.T) {
 
 	t.Run("errorf", func(t *testing.T) {
 		// Arrange
-		std := clog.Std()
+		logger := clog.Std(log.Default())
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 
 		// Act
-		std.Errorf("some message")
+		logger.Errorf("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")
@@ -39,12 +39,12 @@ func TestStd(t *testing.T) {
 
 	t.Run("infof", func(t *testing.T) {
 		// Arrange
-		std := clog.Std()
+		logger := clog.Std(log.Default())
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 
 		// Act
-		std.Infof("some message")
+		logger.Infof("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")
@@ -52,66 +52,12 @@ func TestStd(t *testing.T) {
 
 	t.Run("warnf", func(t *testing.T) {
 		// Arrange
-		std := clog.Std()
+		logger := clog.Std(log.Default())
 		var buf bytes.Buffer
 		log.SetOutput(&buf)
 
 		// Act
-		std.Warnf("some message")
-
-		// Assert
-		assert.Contains(t, buf.String(), "some message")
-	})
-}
-
-func TestStdWith(t *testing.T) {
-	t.Run("debugf", func(t *testing.T) {
-		// Arrange
-		std := clog.StdWith(log.Default())
-		var buf bytes.Buffer
-		log.SetOutput(&buf)
-
-		// Act
-		std.Debugf("some message")
-
-		// Assert
-		assert.Contains(t, buf.String(), "some message")
-	})
-
-	t.Run("errorf", func(t *testing.T) {
-		// Arrange
-		std := clog.StdWith(log.Default())
-		var buf bytes.Buffer
-		log.SetOutput(&buf)
-
-		// Act
-		std.Errorf("some message")
-
-		// Assert
-		assert.Contains(t, buf.String(), "some message")
-	})
-
-	t.Run("infof", func(t *testing.T) {
-		// Arrange
-		std := clog.StdWith(log.Default())
-		var buf bytes.Buffer
-		log.SetOutput(&buf)
-
-		// Act
-		std.Infof("some message")
-
-		// Assert
-		assert.Contains(t, buf.String(), "some message")
-	})
-
-	t.Run("warnf", func(t *testing.T) {
-		// Arrange
-		std := clog.StdWith(log.Default())
-		var buf bytes.Buffer
-		log.SetOutput(&buf)
-
-		// Act
-		std.Warnf("some message")
+		logger.Warnf("some message")
 
 		// Assert
 		assert.Contains(t, buf.String(), "some message")
