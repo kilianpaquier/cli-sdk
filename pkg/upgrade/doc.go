@@ -1,17 +1,12 @@
 /*
 The upgrade package provides the possibility to upgrade / install any package with various tunings:
 
-- Specify the asset name to download (with templating)
-
-- Installation destination
-
-- Specify the target binary name (with templating)
-
-- A specific major version
-
-- A specific minor version
-
-- Include prereleases
+  - Specify the asset name to download (with templating)
+  - Installation destination
+  - Specify the target binary name (with templating)
+  - A specific major version
+  - A specific minor version
+  - Include prereleases
 
 Note than when using major or minor options, the current version will not be used.
 Why ? Because one could want to install an older version in case a breaking change was made by error

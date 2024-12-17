@@ -20,8 +20,16 @@ var (
 	// ErrNoGetReleases is the error returned by Run when the input getReleases isn't given.
 	ErrNoGetReleases = errors.New("getReleases func must not be nil")
 
-	// ErrNoProjectName is the erreur returned by Run when the input projectName isn't given.
+	// ErrNoProjectName is the error returned by Run when the input projectName isn't given.
 	ErrNoProjectName = errors.New("projectName must not be empty")
+
+	// ErrNoNewVersion is the error returned by Run when no new version is found matching the input options.
+	ErrNoNewVersion = errors.New("no new version found matching options")
+
+	// ErrAlreadyInstalled is the error returned by Run when the current version is the same as the one to install.
+	//
+	// When returned, the current version is also returned alongside.
+	ErrAlreadyInstalled = errors.New("version already installed")
 )
 
 // Release represents a release with its assets, its name
@@ -44,34 +52,34 @@ type Asset struct {
 type GetReleases func(ctx context.Context, httpClient *http.Client) ([]Release, error)
 
 // Run is the main function of upgrade package.
+//
 // It reads all releases from the provided GetReleases function,
 // searches the appropriate release to install depending on input filters (major, minor, prerelease)
 // and then installs it if found (or else does nothing).
 //
 // Installation, as provided in various functions docs, is made either in ${HOME}/.local/bin
 // or in provided destination directory with WithDestination option.
-func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleases, opts ...RunOption) error {
+func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleases, opts ...RunOption) (string, error) {
 	if repo == "" {
-		return ErrNoProjectName
+		return "", ErrNoProjectName
 	}
 	if getReleases == nil {
-		return ErrNoGetReleases
+		return "", ErrNoGetReleases
 	}
 
 	ro, err := newRunOpt(opts...)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	releases, err := getReleases(ctx, ro.httpClient)
 	if err != nil {
-		return fmt.Errorf("get releases: %w", err)
+		return "", fmt.Errorf("get releases: %w", err)
 	}
 
 	release, ok := findRelease(releases, ro.releaseOptions)
 	if !ok {
-		ro.log.Infof("no new version found matching options")
-		return nil
+		return "", ErrNoNewVersion
 	}
 
 	s := _wordRegexp.FindAllString(semver.Prerelease(release.TagName), -1)
@@ -95,26 +103,23 @@ func Run(ctx context.Context, repo, currentVersion string, getReleases GetReleas
 
 	targetName, err := getTemplateValue(ro.targetTemplate, templateData)
 	if err != nil {
-		return fmt.Errorf("get target name: %w", err)
+		return "", fmt.Errorf("get target name: %w", err)
 	}
 	dest := filepath.Join(ro.destdir, targetName)
 
-	ro.log.Infof("installing version '%s'", release.TagName)
 	if currentVersion == release.TagName && cfs.Exists(dest) {
-		ro.log.Infof("version '%s' already installed in '%s'", release.TagName, dest)
-		return nil
+		return release.TagName, ErrAlreadyInstalled
 	}
 
 	assetName, err := getTemplateValue(ro.assetTemplate, templateData)
 	if err != nil {
-		return fmt.Errorf("get asset name: %w", err)
+		return "", fmt.Errorf("get asset name: %w", err)
 	}
 
 	if err := downloadAndMove(ctx, ro.httpClient, repo, release, assetName, dest); err != nil {
-		return err
+		return "", err
 	}
-	ro.log.Infof("successfully installed version '%s' in '%s'", release.TagName, dest)
-	return nil
+	return release.TagName, nil
 }
 
 // downloadAndMove downloads the provided assetName (if it exists) from the release and moves it into provided dest.

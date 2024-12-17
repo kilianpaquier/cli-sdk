@@ -39,7 +39,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("error_missing_project_name", func(t *testing.T) {
 		// Act
-		err := upgrade.Run(ctx, "", "", nil)
+		_, err := upgrade.Run(ctx, "", "", nil)
 
 		// Assert
 		assert.ErrorIs(t, err, upgrade.ErrNoProjectName)
@@ -47,7 +47,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("error_missing_get_releases", func(t *testing.T) {
 		// Act
-		err := upgrade.Run(ctx, "repo", "", nil)
+		_, err := upgrade.Run(ctx, "repo", "", nil)
 
 		// Assert
 		assert.ErrorIs(t, err, upgrade.ErrNoGetReleases)
@@ -55,7 +55,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("error_invalid_major_option", func(t *testing.T) {
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMajor("invalid"))
+		_, err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMajor("invalid"))
 
 		// Assert
 		assert.ErrorContains(t, err, upgrade.ErrInvalidOptions.Error())
@@ -64,7 +64,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("error_invalid_minor_option", func(t *testing.T) {
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMinor("invalid"))
+		_, err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMinor("invalid"))
 
 		// Assert
 		assert.ErrorContains(t, err, upgrade.ErrInvalidOptions.Error())
@@ -73,7 +73,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("error_both_major_minor_options_given", func(t *testing.T) {
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMajor("v1"), upgrade.WithMinor("v4.3"))
+		_, err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithMajor("v1"), upgrade.WithMinor("v4.3"))
 
 		// Assert
 		assert.ErrorContains(t, err, upgrade.ErrInvalidOptions.Error())
@@ -87,7 +87,7 @@ func TestRun(t *testing.T) {
 		} // specify var with type to ensure interface is implemented
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", errReleases)
+		_, err := upgrade.Run(ctx, "repo", "", errReleases)
 
 		// Assert
 		assert.ErrorContains(t, err, "get releases: some error")
@@ -101,7 +101,7 @@ func TestRun(t *testing.T) {
 			httpmock.NewStringResponder(http.StatusInternalServerError, "unused error"))
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithHTTPClient(httpClient))
+		_, err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithHTTPClient(httpClient))
 
 		// Assert
 		assert.ErrorContains(t, err, fmt.Sprintf("get releases: list releases: %s %s", http.MethodGet, url))
@@ -122,7 +122,7 @@ func TestRun(t *testing.T) {
 			}))
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases,
+		_, err := upgrade.Run(ctx, "repo", "", getReleases,
 			upgrade.WithTargetTemplate("{{ func }}"),
 			upgrade.WithHTTPClient(httpClient))
 
@@ -145,7 +145,7 @@ func TestRun(t *testing.T) {
 			}))
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases,
+		_, err := upgrade.Run(ctx, "repo", "", getReleases,
 			upgrade.WithAssetTemplate("{{ func }}"),
 			upgrade.WithHTTPClient(httpClient))
 
@@ -168,7 +168,7 @@ func TestRun(t *testing.T) {
 			}))
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithHTTPClient(httpClient))
+		_, err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithHTTPClient(httpClient))
 
 		// Assert
 		assert.ErrorContains(t, err, "get download url")
@@ -191,7 +191,7 @@ func TestRun(t *testing.T) {
 			}))
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithHTTPClient(httpClient))
+		_, err := upgrade.Run(ctx, "repo", "", getReleases, upgrade.WithHTTPClient(httpClient))
 
 		// Assert
 		assert.ErrorContains(t, err, "download asset(s)")
@@ -210,12 +210,12 @@ func TestRun(t *testing.T) {
 		dest := filepath.Join(t.TempDir(), "subdir")
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "", getReleases,
+		_, err := upgrade.Run(ctx, "repo", "", getReleases,
 			upgrade.WithDestination(dest),
 			upgrade.WithHTTPClient(httpClient))
 
 		// Assert
-		require.NoError(t, err)
+		assert.ErrorIs(t, err, upgrade.ErrNoNewVersion)
 		assert.Equal(t, 1, httpmock.GetTotalCallCount())
 		assert.NoDirExists(t, dest)
 	})
@@ -240,14 +240,14 @@ func TestRun(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Join(dest, "repo-beta.exe"), cfs.RwxRxRxRx))
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "v1.0.1-beta.1", getReleases,
+		_, err := upgrade.Run(ctx, "repo", "v1.0.1-beta.1", getReleases,
 			upgrade.WithAssetTemplate("{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}.tar.gz"),
 			upgrade.WithDestination(dest),
 			upgrade.WithHTTPClient(httpClient),
 			upgrade.WithPrereleases(true))
 
 		// Assert
-		require.NoError(t, err)
+		assert.ErrorIs(t, err, upgrade.ErrAlreadyInstalled)
 		assert.Equal(t, 1, httpmock.GetTotalCallCount())
 	})
 
@@ -273,7 +273,7 @@ func TestRun(t *testing.T) {
 		dest := t.TempDir()
 
 		// Act
-		err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
+		_, err := upgrade.Run(ctx, "repo", "v0.0.0", getReleases,
 			upgrade.WithDestination(dest),
 			upgrade.WithHTTPClient(httpClient),
 			upgrade.WithTargetTemplate("{{ .Repo }}"),

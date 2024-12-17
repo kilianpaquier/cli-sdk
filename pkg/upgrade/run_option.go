@@ -11,8 +11,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-cleanhttp"
-
-	"github.com/kilianpaquier/cli-sdk/pkg/clog"
 )
 
 var (
@@ -34,7 +32,9 @@ type RunOption func(*runOptions) error
 
 // WithAssetTemplate specifies the asset name to match (equal) for during asset finding (to retrieve the appropriate one to install).
 //
-// By default it's '{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}'.
+// By default it's:
+//
+//	{{ .Repo }}_{{ .GOOS }}_{{ .GOARCH }}{{ .ArchiveExt }}
 //
 // Various functions are available: 'lower', 'title', 'upper'.
 //
@@ -67,25 +67,17 @@ func WithHTTPClient(client *http.Client) RunOption {
 	}
 }
 
-// WithLogger defines the logger implementation for Run function.
-//
-// When not provided, no logging will be made.
-func WithLogger(log clog.Logger) RunOption {
-	return func(o *runOptions) error {
-		o.log = log
-		return nil
-	}
-}
-
 // WithTargetTemplate specifies the target name of the installed binary.
 //
 // By default it's
-// {{- .Repo }}
-// {{- if ne .Opts.Major "" }}{{ print "-" .Opts.Major }}
-// {{- else if ne .Opts.Minor "" }}{{ print "-" .Opts.Minor }}
-// {{- end }}
-// {{- if and .Opts.Prereleases (ne .Prerelease "") }}{{ print "-" .Prerelease }}{{ end }}
-// {{- .BinExt }}
+//
+//	{{- .Repo }}
+//	{{- if ne .Opts.Major "" }}{{ print "-" .Opts.Major }}
+//	{{- else if ne .Opts.Minor "" }}{{ print "-" .Opts.Minor }}
+//	{{- end }}
+//	{{- if and .Opts.Prereleases (ne .Prerelease "") }}{{ print "-" .Prerelease }}{{ end }}
+//	{{- .BinExt }}
+//
 // which gives 'repo-pre' or 'repo-v1.exe', or 'repo.exe' or 'repo' or 'repo-v1.6', etc.
 // depending on inputs options and whether the installed version is a prerelease or not.
 //
@@ -144,7 +136,6 @@ type runOptions struct {
 	assetTemplate  string
 	destdir        string
 	httpClient     *http.Client
-	log            clog.Logger
 	targetTemplate string
 }
 
@@ -187,9 +178,6 @@ func newRunOpt(opts ...RunOption) (runOptions, error) {
 	}
 	if ro.httpClient == nil {
 		ro.httpClient = cleanhttp.DefaultClient()
-	}
-	if ro.log == nil {
-		ro.log = clog.Noop()
 	}
 	if ro.targetTemplate == "" {
 		ro.targetTemplate = `
