@@ -26,7 +26,7 @@ func OS() FS {
 // descriptor has mode O_RDONLY.
 // If there is an error, it will be of type *PathError.
 func (*osFS) Open(name string) (fs.File, error) {
-	return os.Open(name) //nolint:wrapcheck
+	return os.Open(name)
 }
 
 // ReadDir reads the named directory,
@@ -35,7 +35,7 @@ func (*osFS) Open(name string) (fs.File, error) {
 // ReadDir returns the entries it was able to read before the error,
 // along with the error.
 func (*osFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	return os.ReadDir(name) //nolint:wrapcheck
+	return os.ReadDir(name)
 }
 
 // ReadFile reads the named file and returns the contents.
@@ -43,5 +43,5 @@ func (*osFS) ReadDir(name string) ([]fs.DirEntry, error) {
 // Because ReadFile reads the whole file, it does not treat an EOF from Read
 // as an error to be reported.
 func (*osFS) ReadFile(name string) ([]byte, error) {
-	return os.ReadFile(name) //nolint:wrapcheck
+	return os.ReadFile(name)
 }
