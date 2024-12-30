@@ -47,10 +47,6 @@ func EqualFiles(expected, actual string) error {
 // It will fail with t in case a file is missing in actual,
 // a file is present in actual but not in expected
 // or if the content of any file in actual is not the same as its peer in expected.
-//
-// Note that there's one limitation in EqualDirs, in fact, when multiple files between directories have the same name (and extension),
-// the resulted comparison may fail since all read files are stored in a map.
-// It's a limitation that you should keep in mind and that may be fixed in the future (but it's not a priority for now).
 func EqualDirs(expected, actual string) error {
 	expectabs, err := filepath.Abs(expected)
 	if err != nil {
