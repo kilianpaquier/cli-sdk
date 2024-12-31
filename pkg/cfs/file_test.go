@@ -52,12 +52,9 @@ func TestCopyFile(t *testing.T) {
 		assert.FileExists(t, dest)
 	})
 
-	t.Run("success_with_fs", func(t *testing.T) {
+	t.Run("success_with_options", func(t *testing.T) {
 		// Act
-		err := cfs.CopyFile(src, dest,
-			cfs.WithFS(cfs.OS()),
-			cfs.WithJoin(filepath.Join),
-			cfs.WithPerm(cfs.RwRR))
+		err := cfs.CopyFile(src, dest, cfs.WithJoin(filepath.Join), cfs.WithPerm(cfs.RwRR))
 
 		// Assert
 		require.NoError(t, err)

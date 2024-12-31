@@ -3,6 +3,7 @@ package cfs
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -30,7 +31,7 @@ func WithPerm(perm os.FileMode) Option {
 }
 
 // WithFS specifies a FS to read files instead of os filesystem.
-func WithFS(fsys FS) Option {
+func WithFS(fsys fs.FS) Option {
 	return func(o options) options {
 		o.fsys = fsys
 		return o
@@ -38,7 +39,7 @@ func WithFS(fsys FS) Option {
 }
 
 type options struct {
-	fsys FS
+	fsys fs.FS
 	join Join
 	perm os.FileMode
 }
@@ -52,7 +53,7 @@ func newOpt(opts ...Option) options {
 	}
 
 	if o.fsys == nil {
-		o.fsys = OS()
+		o.fsys = &OS{}
 	}
 	if o.join == nil {
 		o.join = filepath.Join
@@ -97,7 +98,13 @@ func CopyFile(src, dest string, opts ...Option) error {
 func SafeMove(src, dest string, opts ...Option) error {
 	o := newOpt(opts...)
 
-	bytes, err := o.fsys.ReadFile(src)
+	file, err := o.fsys.Open(src)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return fmt.Errorf("read file: %w", err)
 	}
