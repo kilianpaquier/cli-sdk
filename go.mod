@@ -1,17 +1,15 @@
 module github.com/kilianpaquier/cli-sdk
 
-go 1.22.0
-
-toolchain go1.23.4
+go 1.24.0
 
 require (
 	github.com/google/go-github/v63 v63.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-getter/v2 v2.2.3
-	github.com/jarcoal/httpmock v1.3.1
-	github.com/stretchr/testify v1.10.0
-	golang.org/x/mod v0.22.0
-	golang.org/x/text v0.21.0
+	github.com/jarcoal/httpmock v1.4.1
+	github.com/stretchr/testify v1.11.1
+	golang.org/x/mod v0.29.0
+	golang.org/x/text v0.30.0
 )
 
 require (
